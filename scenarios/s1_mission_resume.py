@@ -76,23 +76,40 @@ def session_facts(session_id: str) -> dict:
 
 
 def main() -> bool:
+    try:
+        return _main()
+    except Exception as e:  # record the failure as evidence instead of losing it
+        print("SCENARIO ERROR", repr(e))
+        if _CURRENT.get("ev"):
+            _CURRENT["ev"].check("scenario completed without error", False, repr(e)[:300])
+            _CURRENT["ev"].save(**_CURRENT.get("extra", {}))
+        return False
+
+
+_CURRENT: dict = {}
+
+
+def _main() -> bool:
     kind = "consultation_follow_up"
     ev = Evidence("s1_mission_resume" + ("_live" if LIVE else ""),
                   "One mission across a worker restart" + (" (live Gemini)" if LIVE else ""),
                   where="Cloud Run worker + Cloud Tasks + Firestore + BigQuery + Agent Platform Sessions")
     if LIVE:
         ev.doc["model_mode"] = "live (worker env)"
+    _CURRENT["ev"] = ev
     d, rid = db(), run_id()
     cid = f"c-{rid}-jordan"
     email, phone = f"jordan.{rid}@example.com", "+1 555 " + "".join(c for c in rid if c.isdigit())[-7:]
     seed_contact(cid, [email, phone])
     facts = {"first_name": "Jordan", "slots": ["Tuesday 10:00", "Thursday 15:00"],
              "topic": "consultation"}
-    prompt = ("Follow up with the contact who asked for a consultation. Offer the two slots in the "
-              "facts, wait for the answer, then confirm the slot they choose. Facts: " + json.dumps(facts))
+    prompt = ("Follow up with the contact who asked for a consultation. Contact: " + email + ". Offer the "
+              "two slots in the facts, wait for the answer, then confirm the slot they choose. Facts: "
+              + json.dumps(facts))
     mid_a, mid_b = f"m-{rid}-a", f"m-{rid}-b"
     seed_mission(mid_a, kind, email, facts, prompt)
     seed_mission(mid_b, kind, phone, facts, prompt)
+    _CURRENT["extra"] = {"mission_id": mid_a, "competing_mission_id": mid_b}
     ev.step("mission rows written to BigQuery", missions=[mid_a, mid_b],
             table=f"{settings().project}.{settings().bq_dataset}.missions")
 

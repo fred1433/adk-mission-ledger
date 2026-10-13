@@ -13,7 +13,6 @@ and every trace entry says so.
 from __future__ import annotations
 
 import json
-import pathlib
 import re
 
 from .config import REPO_ROOT, settings
@@ -61,14 +60,15 @@ def _live_review(action: dict, mission: dict) -> dict:
 
     s = settings()
     client = genai.Client(vertexai=True, project=s.project, location=s.live_model_location)
-    prompt = (pathlib.Path(REPO_ROOT / "skills" / "follow-up-writer" / "references" /
-                           "reviewer_rubric.md").read_text()
+    prompt = ((REPO_ROOT / "policies" / "reviewer_rubric.md").read_text()
               + "\n\nMISSION FACTS:\n" + json.dumps(mission.get("facts", {}))
               + "\n\nPROPOSED MESSAGE:\n" + action["body"])
     resp = client.models.generate_content(
         model=s.live_model, contents=prompt,
         config=types.GenerateContentConfig(response_mime_type="application/json",
-                                           max_output_tokens=2048, temperature=0))
+                                           max_output_tokens=4096, temperature=0,
+                                           thinking_config=types.ThinkingConfig(
+                                               thinking_level=types.ThinkingLevel.LOW)))
     try:
         raw = json.loads(resp.text)
     except (TypeError, ValueError):

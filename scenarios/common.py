@@ -10,7 +10,6 @@ from __future__ import annotations
 import datetime as dt
 import importlib.metadata as md
 import json
-import os
 import pathlib
 import subprocess
 import sys

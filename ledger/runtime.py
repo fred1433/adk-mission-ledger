@@ -57,7 +57,7 @@ async def _segment(ctx: MissionCtx, model, session_id: str, message: types.Conte
     trace.record(ctx.db, mid, "agent.equipped", tools=tool_names, model=model.model,
                  persona=ctx.manifest["persona"], skills=ctx.manifest["skills"],
                  resuming_invocation=invocation_id)
-    pending, final_text, inv = None, None, invocation_id
+    pending, final_text, inv, model_error = None, None, invocation_id, None
     async for ev in runner.run_async(user_id=SESSION_USER, session_id=session_id,
                                      invocation_id=invocation_id, new_message=message):
         if inv is None and ev.invocation_id:
@@ -69,13 +69,16 @@ async def _segment(ctx: MissionCtx, model, session_id: str, message: types.Conte
                          function_call_id=fc.id)
             if ev.long_running_tool_ids and fc.id in ev.long_running_tool_ids:
                 pending = fc.id
+        if ev.error_code:
+            model_error = f"{ev.error_code}: {ev.error_message or ''}".strip()
+            trace.record(ctx.db, mid, "agent.model_error", error=model_error)
         for part in (ev.content.parts if ev.content else []) or []:
             if part.text and not part.thought:
                 final_text = part.text
     del runner, app  # the agent is discarded with its segment
     trace.record(ctx.db, mid, "agent.discarded", invocation_id=inv)
     return {"paused": pending is not None, "pending_call_id": pending,
-            "invocation_id": inv, "final_text": final_text}
+            "invocation_id": inv, "final_text": final_text, "model_error": model_error}
 
 
 def _dispatch_all(ctx: MissionCtx) -> list[dict]:
@@ -190,10 +193,13 @@ def _close_segment(ctx: MissionCtx, seg: dict, sent: list[dict], event_ref) -> d
     elif seg["paused"]:
         new_status = "WAITING_REPLY"
     else:
-        rejected = [d.id for d in db.collection(actions.ACTIONS)
-                    .where(filter=firestore.FieldFilter("mission_id", "==", mid)).stream()
-                    if d.get("status") in ("REJECTED", "NEEDS_REVIEW")]
-        new_status = "NEEDS_REVIEW" if rejected else "DONE"
+        mine = [d.to_dict() for d in db.collection(actions.ACTIONS)
+                .where(filter=firestore.FieldFilter("mission_id", "==", mid)).stream()]
+        blocked = [a for a in mine if a["status"] in ("REJECTED", "NEEDS_REVIEW")]
+        # A segment that ends without any sent action, or on a model error,
+        # is not a finished mission: a human looks at it.
+        done = bool(mine) and all(a["status"] == "SENT" for a in mine) and not seg.get("model_error")
+        new_status = "DONE" if done and not blocked else "NEEDS_REVIEW"
     update = {"status": new_status, "last_segment_text": seg["final_text"],
               "invocation_id": seg["invocation_id"]}
     if seg["paused"]:

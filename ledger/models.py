@@ -67,8 +67,10 @@ def _capped_gemini_cls():
             _LIVE_CALLS["n"] += 1
             cfg = llm_request.config
             if cfg is not None:
-                cfg.max_output_tokens = min(cfg.max_output_tokens or 2048, 2048)
+                from google.genai import types as gt
+                cfg.max_output_tokens = min(cfg.max_output_tokens or 4096, 4096)
                 cfg.temperature = 0
+                cfg.thinking_config = gt.ThinkingConfig(thinking_level=gt.ThinkingLevel.LOW)
             async for r in super().generate_content_async(llm_request, stream):
                 yield r
 
