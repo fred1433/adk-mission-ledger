@@ -1,0 +1,153 @@
+{
+  "scenario": "s5_memory",
+  "title": "Quarantine, validation, create-only publication",
+  "where": "local validator -> Firestore; publisher -> FakeMemoryBank (in process); worker identity checks on Cloud Run",
+  "started_at": "2026-10-13T13:44:35+00:00",
+  "code_commit": "a02cf271a6cd",
+  "packages": {
+    "google-adk": "2.11.0",
+    "google-cloud-aiplatform": "1.165.1",
+    "google-cloud-firestore": "2.34.1",
+    "google-cloud-bigquery": "3.46.1",
+    "google-cloud-tasks": "2.26.0",
+    "google-genai": "2.30.0"
+  },
+  "model_mode": "fixture",
+  "paid_model_calls": false,
+  "project": "mission-ledger-1013-13546",
+  "region": "us-central1",
+  "steps": [
+    {
+      "at": "2026-10-13T13:44:37.272+00:00",
+      "what": "quarantined candidates from the mission",
+      "mission_id": "m-10131342-c338-a",
+      "candidates": [
+        {
+          "candidate_id": "mem-7277ffc559",
+          "topic": "preferred_time_of_day",
+          "scope": {
+            "contact_id": "c-10131342-c338-jordan"
+          },
+          "fact": "Prefers afternoon appointments.",
+          "status": "QUARANTINED"
+        },
+        {
+          "candidate_id": "mem-7d883dc723",
+          "topic": "discount_for_hesitation",
+          "scope": {
+            "playbook": "follow-up-writer"
+          },
+          "fact": "Offering a discount makes hesitant contacts reply faster.",
+          "status": "QUARANTINED"
+        }
+      ]
+    },
+    {
+      "at": "2026-10-13T13:44:38.354+00:00",
+      "what": "validated preferred_time_of_day",
+      "status": "APPROVED",
+      "stage": "reviewer",
+      "reasons": [
+        "stated directly by the contact's choice"
+      ],
+      "reviewer_mode": "fixture:memory.json"
+    },
+    {
+      "at": "2026-10-13T13:44:39.404+00:00",
+      "what": "validated discount_for_hesitation",
+      "status": "REJECTED",
+      "stage": "rules",
+      "reasons": [
+        "playbook_needs_two_missions"
+      ],
+      "reviewer_mode": null
+    },
+    {
+      "at": "2026-10-13T13:44:40.513+00:00",
+      "what": "approved fact published with memories.create",
+      "memory_name": "projects/mission-ledger-1013-13546/locations/us-central1/reasoningEngines/3521753610830479360/memories/1"
+    },
+    {
+      "at": "2026-10-13T13:44:41.416+00:00",
+      "what": "worker identity permissions (testIamPermissions from inside Cloud Run)",
+      "process": {
+        "pid": 1,
+        "revision": "ledger-worker-00005-xt7",
+        "service": "ledger-worker",
+        "instance": "0010dd8607765a4654eb55f3",
+        "where": "cloud-run"
+      },
+      "service_account": "ledger-worker@mission-ledger-1013-13546.iam.gserviceaccount.com",
+      "granted_on_project": [
+        "aiplatform.memories.get",
+        "aiplatform.memories.list",
+        "aiplatform.memories.retrieve",
+        "aiplatform.sessionEvents.append",
+        "aiplatform.sessions.create"
+      ],
+      "denied_on_project": [
+        "aiplatform.memories.create",
+        "aiplatform.memories.delete",
+        "aiplatform.memories.generate",
+        "aiplatform.memories.update"
+      ],
+      "can_impersonate_publisher": []
+    }
+  ],
+  "assertions": [
+    {
+      "assertion": "contact-scoped preference approved",
+      "passed": true,
+      "observed": "APPROVED"
+    },
+    {
+      "assertion": "single-mission playbook lesson rejected",
+      "passed": true,
+      "observed": [
+        "playbook_needs_two_missions"
+      ]
+    },
+    {
+      "assertion": "publisher refuses a rejected candidate",
+      "passed": true,
+      "observed": "mem-7d883dc723 is REJECTED, not APPROVED"
+    },
+    {
+      "assertion": "approved fact stored unchanged (fake bank)",
+      "passed": true,
+      "observed": [
+        "Prefers afternoon appointments."
+      ]
+    },
+    {
+      "assertion": "rejected text absent from the complete listing (fake bank)",
+      "passed": true,
+      "observed": 1
+    },
+    {
+      "assertion": "publisher used create only",
+      "passed": true,
+      "observed": [
+        "create",
+        "list"
+      ]
+    },
+    {
+      "assertion": "worker lacks memories.create/update/delete/generate",
+      "passed": true,
+      "observed": [
+        "aiplatform.memories.create",
+        "aiplatform.memories.delete",
+        "aiplatform.memories.generate",
+        "aiplatform.memories.update"
+      ]
+    },
+    {
+      "assertion": "worker cannot impersonate the publisher",
+      "passed": true,
+      "observed": []
+    }
+  ],
+  "ended_at": "2026-10-13T13:44:41+00:00",
+  "passed": true
+}

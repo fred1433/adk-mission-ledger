@@ -68,7 +68,7 @@ def _live_review(action: dict, mission: dict) -> dict:
     resp = client.models.generate_content(
         model=s.live_model, contents=prompt,
         config=types.GenerateContentConfig(response_mime_type="application/json",
-                                           max_output_tokens=400, temperature=0))
+                                           max_output_tokens=2048, temperature=0))
     try:
         raw = json.loads(resp.text)
     except (TypeError, ValueError):

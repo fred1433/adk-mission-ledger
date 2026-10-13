@@ -1,0 +1,5 @@
+title: Mission ledger worker - model calls (live runs only)
+description: Granted to the worker only for an authorised live run, removed afterwards.
+stage: GA
+includedPermissions:
+- aiplatform.endpoints.predict
