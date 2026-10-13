@@ -171,10 +171,10 @@ Pinned: `google-adk==2.11.0`, `google-cloud-aiplatform==1.165.1`, `google-cloud-
 
 ```
 uv venv -p 3.12 .venv && uv pip install -r requirements.lock pytest
-.venv/bin/python -m pytest tests                      # offline
-PROJECT=... ./infra/setup.sh                          # throwaway project; prints ENGINE_ID
+.venv/bin/python -m pytest tests          # offline
+PROJECT=... ./infra/setup.sh              # throwaway project; prints ENGINE_ID
 PROJECT=... ENGINE_ID=... WEBHOOK_SECRET=... ./infra/deploy.sh
-cd scenarios && python s1_mission_resume.py           # needs LEDGER_* env, see ledger/config.py
+cd scenarios && python s1_mission_resume.py   # LEDGER_* env: ledger/config.py
 ```
 
 Paid model calls need both `LEDGER_MODEL_MODE=live` and `LEDGER_ALLOW_PAID_MODEL_CALLS=yes`, plus the
