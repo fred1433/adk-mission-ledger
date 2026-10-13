@@ -96,6 +96,8 @@ async def start(mission_id: str) -> dict:
     lease = coordination.acquire_lease(db, mission_id, _worker_id(), s.lease_seconds)
     mref = db.collection(MISSIONS).document(mission_id)
     doc = mref.get().to_dict() or {}
+    if doc.get("status") in INTERRUPTED:
+        return _interrupted(db, lease, doc)
     if doc.get("status") not in (None, "QUEUED"):
         coordination.release(db, lease, {})
         trace.record(db, mission_id, "start.noop", status=doc.get("status"))
@@ -149,6 +151,8 @@ async def resume(mission_id: str, event_id: str) -> dict:
     doc = mref.get().to_dict() or {}
     eref = db.collection(INBOUND).document(event_id)
     ev = eref.get().to_dict() or {}
+    if doc.get("status") in INTERRUPTED:
+        return _interrupted(db, lease, doc)
     if ev.get("wake_state") == "CONSUMED" or doc.get("status") != "WAITING_REPLY":
         coordination.release(db, lease, {})
         trace.record(db, mission_id, "resume.noop", event_id=event_id,
@@ -183,6 +187,22 @@ async def resume(mission_id: str, event_id: str) -> dict:
     seg = await _segment(ctx, model, doc["session_id"], reply, doc["invocation_id"])
     sent = _dispatch_all(ctx)
     return _close_segment(ctx, seg, sent, event_ref=eref)
+
+
+INTERRUPTED = {"RUNNING", "RESUMING"}
+
+
+def _interrupted(db, lease, doc: dict) -> dict:
+    """We hold a fresh lease, so the previous segment's lease expired while it
+    was RUNNING or RESUMING: that worker died mid-segment. Do not guess what
+    it did; stop for a human. Approved actions stay idempotent if retried.
+    """
+    coordination.release(db, lease, {"status": "NEEDS_REVIEW",
+                                     "reason": f"segment interrupted while {doc['status']}"})
+    trace.record(db, lease.mission_id, "segment.interrupted", previous_status=doc["status"],
+                 generation=lease.generation)
+    missions_bq.report(lease.mission_id, "NEEDS_REVIEW", {"interrupted": doc["status"]})
+    return {"mission_id": lease.mission_id, "status": "NEEDS_REVIEW"}
 
 
 def _close_segment(ctx: MissionCtx, seg: dict, sent: list[dict], event_ref) -> dict:

@@ -6,5 +6,6 @@ COPY ledger ledger
 COPY skills skills
 COPY personas personas
 COPY fixtures fixtures
+COPY policies policies
 ENV PYTHONUNBUFFERED=1
 CMD exec uvicorn ledger.service:app --host 0.0.0.0 --port ${PORT:-8080}

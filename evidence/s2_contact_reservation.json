@@ -2,8 +2,8 @@
   "scenario": "s2_contact_reservation",
   "title": "Contact reservation vs worker lease, and fencing",
   "where": "local process -> Firestore (Google Cloud)",
-  "started_at": "2026-10-13T13:33:20+00:00",
-  "code_commit": "8be4dce83923",
+  "started_at": "2026-10-13T13:56:42+00:00",
+  "code_commit": "b5b889e11eeb",
   "packages": {
     "google-adk": "2.11.0",
     "google-cloud-aiplatform": "1.165.1",
@@ -18,135 +18,135 @@
   "region": "us-central1",
   "steps": [
     {
-      "at": "2026-10-13T13:33:22.338+00:00",
+      "at": "2026-10-13T13:56:43.897+00:00",
       "what": "registered one contact with two aliases",
-      "contact_id": "c-10131333-c98e",
+      "contact_id": "c-10131356-3590",
       "aliases": [
-        "email:casey.10131333-c98e@example.com",
-        "phone:+15553133398"
+        "email:casey.10131356-3590@example.com",
+        "phone:+15553563590"
       ]
     },
     {
-      "at": "2026-10-13T13:33:25.532+00:00",
+      "at": "2026-10-13T13:56:46.976+00:00",
       "what": "20 concurrent reservation attempts",
-      "elapsed_s": 3.19,
+      "elapsed_s": 3.08,
       "results": [
         [
-          "m-10131333-c98e-00",
-          "refused:m-10131333-c98e-13",
-          "email:casey.10131333-c98e@example.com"
+          "m-10131356-3590-00",
+          "refused:m-10131356-3590-07",
+          "email:casey.10131356-3590@example.com"
         ],
         [
-          "m-10131333-c98e-01",
-          "refused:m-10131333-c98e-13",
-          "phone:+15553133398"
+          "m-10131356-3590-01",
+          "refused:m-10131356-3590-07",
+          "phone:+15553563590"
         ],
         [
-          "m-10131333-c98e-02",
-          "refused:m-10131333-c98e-13",
-          "email:casey.10131333-c98e@example.com"
+          "m-10131356-3590-02",
+          "refused:m-10131356-3590-07",
+          "email:casey.10131356-3590@example.com"
         ],
         [
-          "m-10131333-c98e-03",
-          "refused:m-10131333-c98e-13",
-          "phone:+15553133398"
+          "m-10131356-3590-03",
+          "refused:m-10131356-3590-07",
+          "phone:+15553563590"
         ],
         [
-          "m-10131333-c98e-04",
-          "refused:m-10131333-c98e-13",
-          "email:casey.10131333-c98e@example.com"
+          "m-10131356-3590-04",
+          "refused:m-10131356-3590-07",
+          "email:casey.10131356-3590@example.com"
         ],
         [
-          "m-10131333-c98e-05",
-          "refused:m-10131333-c98e-13",
-          "phone:+15553133398"
+          "m-10131356-3590-05",
+          "refused:m-10131356-3590-07",
+          "phone:+15553563590"
         ],
         [
-          "m-10131333-c98e-06",
-          "refused:m-10131333-c98e-13",
-          "email:casey.10131333-c98e@example.com"
+          "m-10131356-3590-06",
+          "refused:m-10131356-3590-07",
+          "email:casey.10131356-3590@example.com"
         ],
         [
-          "m-10131333-c98e-07",
-          "refused:m-10131333-c98e-13",
-          "phone:+15553133398"
-        ],
-        [
-          "m-10131333-c98e-08",
-          "refused:m-10131333-c98e-13",
-          "email:casey.10131333-c98e@example.com"
-        ],
-        [
-          "m-10131333-c98e-09",
-          "refused:m-10131333-c98e-13",
-          "phone:+15553133398"
-        ],
-        [
-          "m-10131333-c98e-10",
-          "refused:m-10131333-c98e-13",
-          "email:casey.10131333-c98e@example.com"
-        ],
-        [
-          "m-10131333-c98e-11",
-          "refused:m-10131333-c98e-13",
-          "phone:+15553133398"
-        ],
-        [
-          "m-10131333-c98e-12",
-          "refused:m-10131333-c98e-13",
-          "email:casey.10131333-c98e@example.com"
-        ],
-        [
-          "m-10131333-c98e-13",
+          "m-10131356-3590-07",
           "won",
-          "phone:+15553133398"
+          "phone:+15553563590"
         ],
         [
-          "m-10131333-c98e-14",
-          "refused:m-10131333-c98e-13",
-          "email:casey.10131333-c98e@example.com"
+          "m-10131356-3590-08",
+          "refused:m-10131356-3590-07",
+          "email:casey.10131356-3590@example.com"
         ],
         [
-          "m-10131333-c98e-15",
-          "refused:m-10131333-c98e-13",
-          "phone:+15553133398"
+          "m-10131356-3590-09",
+          "refused:m-10131356-3590-07",
+          "phone:+15553563590"
         ],
         [
-          "m-10131333-c98e-16",
-          "refused:m-10131333-c98e-13",
-          "email:casey.10131333-c98e@example.com"
+          "m-10131356-3590-10",
+          "refused:m-10131356-3590-07",
+          "email:casey.10131356-3590@example.com"
         ],
         [
-          "m-10131333-c98e-17",
-          "refused:m-10131333-c98e-13",
-          "phone:+15553133398"
+          "m-10131356-3590-11",
+          "refused:m-10131356-3590-07",
+          "phone:+15553563590"
         ],
         [
-          "m-10131333-c98e-18",
-          "refused:m-10131333-c98e-13",
-          "email:casey.10131333-c98e@example.com"
+          "m-10131356-3590-12",
+          "refused:m-10131356-3590-07",
+          "email:casey.10131356-3590@example.com"
         ],
         [
-          "m-10131333-c98e-19",
-          "refused:m-10131333-c98e-13",
-          "phone:+15553133398"
+          "m-10131356-3590-13",
+          "refused:m-10131356-3590-07",
+          "phone:+15553563590"
+        ],
+        [
+          "m-10131356-3590-14",
+          "refused:m-10131356-3590-07",
+          "email:casey.10131356-3590@example.com"
+        ],
+        [
+          "m-10131356-3590-15",
+          "refused:m-10131356-3590-07",
+          "phone:+15553563590"
+        ],
+        [
+          "m-10131356-3590-16",
+          "refused:m-10131356-3590-07",
+          "email:casey.10131356-3590@example.com"
+        ],
+        [
+          "m-10131356-3590-17",
+          "refused:m-10131356-3590-07",
+          "phone:+15553563590"
+        ],
+        [
+          "m-10131356-3590-18",
+          "refused:m-10131356-3590-07",
+          "email:casey.10131356-3590@example.com"
+        ],
+        [
+          "m-10131356-3590-19",
+          "refused:m-10131356-3590-07",
+          "phone:+15553563590"
         ]
       ]
     },
     {
-      "at": "2026-10-13T13:33:27.272+00:00",
+      "at": "2026-10-13T13:56:48.781+00:00",
       "what": "owner mission parked; its worker lease released",
-      "mission": "m-10131333-c98e-13",
+      "mission": "m-10131356-3590-07",
       "generation": 1
     },
     {
-      "at": "2026-10-13T13:33:29.236+00:00",
+      "at": "2026-10-13T13:56:50.876+00:00",
       "what": "worker-1 acquired lease",
       "generation": 1,
       "lease_seconds": 2
     },
     {
-      "at": "2026-10-13T13:33:32.904+00:00",
+      "at": "2026-10-13T13:56:54.577+00:00",
       "what": "worker-1 stalled past expiry; worker-2 took over",
       "generation": 2
     }
@@ -156,33 +156,33 @@
       "assertion": "exactly one reservation owner",
       "passed": true,
       "observed": [
-        "m-10131333-c98e-13"
+        "m-10131356-3590-07"
       ]
     },
     {
       "assertion": "both aliases resolved to the same contact",
       "passed": true,
-      "observed": "c-10131333-c98e"
+      "observed": "c-10131356-3590"
     },
     {
       "assertion": "new mission refused while owner waits for a reply",
       "passed": true,
-      "observed": "refused, holder=m-10131333-c98e-13"
+      "observed": "refused, holder=m-10131356-3590-07"
     },
     {
       "assertion": "stale worker-1 cannot commit an action",
       "passed": true,
-      "observed": "stale generation 1 for m-10131333-c98e-fence; current is 2 owned by worker-2"
+      "observed": "stale generation 1 for m-10131356-3590-fence; current is 2 owned by worker-2"
     },
     {
       "assertion": "current worker-2 can commit",
       "passed": true,
       "observed": {
-        "action_id": "m-10131333-c98e-fence.first_contact",
+        "action_id": "m-10131356-3590-fence.first_contact",
         "generation": 2
       }
     }
   ],
-  "ended_at": "2026-10-13T13:33:34+00:00",
+  "ended_at": "2026-10-13T13:56:56+00:00",
   "passed": true
 }

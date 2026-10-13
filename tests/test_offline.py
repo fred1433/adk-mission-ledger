@@ -141,3 +141,10 @@ def test_skill_metadata_declares_purposes():
 def test_fixtures_are_valid_json():
     for p in (REPO_ROOT / "fixtures").rglob("*.json"):
         json.loads(p.read_text())
+
+
+def test_image_contains_every_runtime_folder():
+    copied = {line.split()[1] for line in (REPO_ROOT / "Dockerfile").read_text().splitlines()
+              if line.startswith("COPY ")}
+    for folder in ("ledger", "skills", "personas", "fixtures", "policies"):
+        assert folder in copied, folder

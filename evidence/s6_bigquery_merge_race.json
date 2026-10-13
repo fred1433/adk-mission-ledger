@@ -2,8 +2,8 @@
   "scenario": "s6_bigquery_merge_race",
   "title": "Insert-only MERGE as a lock, vs a Firestore transaction",
   "where": "local process -> BigQuery and Firestore (Google Cloud)",
-  "started_at": "2026-10-13T13:36:24+00:00",
-  "code_commit": "30b836e1b910",
+  "started_at": "2026-10-13T13:58:54+00:00",
+  "code_commit": "b5b889e11eeb",
   "packages": {
     "google-adk": "2.11.0",
     "google-cloud-aiplatform": "1.165.1",
@@ -18,15 +18,15 @@
   "region": "us-central1",
   "steps": [
     {
-      "at": "2026-10-13T13:37:08.419+00:00",
+      "at": "2026-10-13T13:59:34.790+00:00",
       "what": "round 0: 20 concurrent insert-only MERGE on one contact",
-      "rows_for_contact": 3,
-      "statements_reporting_insert": 3,
+      "rows_for_contact": 2,
+      "statements_reporting_insert": 2,
       "errors": 0,
       "all_started_before_first_ended": false
     },
     {
-      "at": "2026-10-13T13:37:12.087+00:00",
+      "at": "2026-10-13T13:59:39.954+00:00",
       "what": "Firestore: 20 concurrent transactional reservations",
       "results": [
         "refused",
@@ -40,14 +40,14 @@
         "refused",
         "refused",
         "refused",
-        "refused",
-        "refused",
-        "refused",
-        "refused",
-        "refused",
-        "refused",
-        "refused",
         "won",
+        "refused",
+        "refused",
+        "refused",
+        "refused",
+        "refused",
+        "refused",
+        "refused",
         "refused"
       ]
     }
@@ -56,7 +56,7 @@
     {
       "assertion": "observed outcome recorded (not asserted in advance)",
       "passed": true,
-      "observed": "max rows for one contact across 1 round(s): 3"
+      "observed": "max rows for one contact across 1 round(s): 2"
     },
     {
       "assertion": "Firestore: exactly one winner",
@@ -67,160 +67,160 @@
   "bigquery_rounds": [
     {
       "round": 0,
-      "contact": "c-10131336-0b62-r0",
+      "contact": "c-10131358-a13f-r0",
       "statements": 20,
-      "rows_for_contact": 3,
-      "statements_reporting_insert": 3,
+      "rows_for_contact": 2,
+      "statements_reporting_insert": 2,
       "errors": 0,
       "overlap": false,
-      "first_start": "2026-10-13T13:36:25.711000+00:00",
-      "last_start": "2026-10-13T13:37:04.254000+00:00",
-      "first_end": "2026-10-13T13:36:27.032000+00:00",
+      "first_start": "2026-10-13T13:58:55.101000+00:00",
+      "last_start": "2026-10-13T13:59:31.485000+00:00",
+      "first_end": "2026-10-13T13:58:56.215000+00:00",
       "jobs": [
         {
-          "job_id": "c75eafca-97d7-4285-8cc5-fbb5e68613d4",
+          "job_id": "4c088d15-eff0-48cc-8816-818d0d898a53",
           "affected": 0,
-          "started": "2026-10-13T13:36:29.229000+00:00",
-          "ended": "2026-10-13T13:36:30.538000+00:00",
+          "started": "2026-10-13T13:58:59.786000+00:00",
+          "ended": "2026-10-13T13:59:01.306000+00:00",
           "error": null
         },
         {
-          "job_id": "7f345eff-72d3-43c9-a5b3-8743c3a9db9f",
+          "job_id": "74976cb0-35c6-47c9-b04a-5db2c4ded75d",
           "affected": 0,
-          "started": "2026-10-13T13:37:02.906000+00:00",
-          "ended": "2026-10-13T13:37:04.251000+00:00",
+          "started": "2026-10-13T13:59:20.538000+00:00",
+          "ended": "2026-10-13T13:59:21.842000+00:00",
           "error": null
         },
         {
-          "job_id": "e4e70af0-f495-4a9c-97eb-697849a4de9a",
+          "job_id": "f1aef25f-ad4f-493c-b60e-75a968a0203b",
           "affected": 0,
-          "started": "2026-10-13T13:37:00.802000+00:00",
-          "ended": "2026-10-13T13:37:02.121000+00:00",
+          "started": "2026-10-13T13:59:14.692000+00:00",
+          "ended": "2026-10-13T13:59:15.947000+00:00",
           "error": null
         },
         {
-          "job_id": "02c7a0d1-e2b7-4d8d-a937-545074ea92bc",
+          "job_id": "a5278613-d7d8-4e65-a8bd-b068ab14884d",
+          "affected": 0,
+          "started": "2026-10-13T13:59:18.994000+00:00",
+          "ended": "2026-10-13T13:59:20.371000+00:00",
+          "error": null
+        },
+        {
+          "job_id": "fb8594d7-0882-41da-bcdd-d08403047305",
+          "affected": 0,
+          "started": "2026-10-13T13:59:08.111000+00:00",
+          "ended": "2026-10-13T13:59:09.937000+00:00",
+          "error": null
+        },
+        {
+          "job_id": "ae6778be-008a-4342-b12b-5aa98984a184",
+          "affected": 0,
+          "started": "2026-10-13T13:59:21.983000+00:00",
+          "ended": "2026-10-13T13:59:23.562000+00:00",
+          "error": null
+        },
+        {
+          "job_id": "4c44260f-0615-4457-98a7-ef6c2a6bc753",
+          "affected": 0,
+          "started": "2026-10-13T13:59:30.760000+00:00",
+          "ended": "2026-10-13T13:59:32.218000+00:00",
+          "error": null
+        },
+        {
+          "job_id": "339841d1-670d-4aa3-8fa3-a48ec109e348",
+          "affected": 0,
+          "started": "2026-10-13T13:59:21.189000+00:00",
+          "ended": "2026-10-13T13:59:22.776000+00:00",
+          "error": null
+        },
+        {
+          "job_id": "73235245-53f2-4d8b-a119-fe3fc7036f0c",
+          "affected": 0,
+          "started": "2026-10-13T13:58:58.285000+00:00",
+          "ended": "2026-10-13T13:58:59.621000+00:00",
+          "error": null
+        },
+        {
+          "job_id": "3d90199e-3db1-4b24-ab5e-f3bd71b2bc38",
+          "affected": 0,
+          "started": "2026-10-13T13:59:29.240000+00:00",
+          "ended": "2026-10-13T13:59:30.563000+00:00",
+          "error": null
+        },
+        {
+          "job_id": "d41a2a8d-7522-471f-a486-683250cf43ba",
+          "affected": 0,
+          "started": "2026-10-13T13:59:11.688000+00:00",
+          "ended": "2026-10-13T13:59:13.037000+00:00",
+          "error": null
+        },
+        {
+          "job_id": "edc04505-6ede-468a-93df-c5fa97fde0f0",
           "affected": 1,
-          "started": "2026-10-13T13:36:26.092000+00:00",
-          "ended": "2026-10-13T13:36:27.322000+00:00",
+          "started": "2026-10-13T13:58:55.113000+00:00",
+          "ended": "2026-10-13T13:58:56.215000+00:00",
           "error": null
         },
         {
-          "job_id": "0ff1fac0-9a14-4e3e-af85-c6537f7f94ca",
+          "job_id": "f618af2a-df70-44e8-a72b-4bac65d3248c",
           "affected": 0,
-          "started": "2026-10-13T13:37:02.305000+00:00",
-          "ended": "2026-10-13T13:37:03.680000+00:00",
+          "started": "2026-10-13T13:59:10.132000+00:00",
+          "ended": "2026-10-13T13:59:11.504000+00:00",
           "error": null
         },
         {
-          "job_id": "bf2b1744-2d9d-416f-90b9-fbdda8dcde46",
+          "job_id": "d37d3b99-0549-4f13-8bd8-c428d41b75d8",
           "affected": 0,
-          "started": "2026-10-13T13:36:59.246000+00:00",
-          "ended": "2026-10-13T13:37:00.606000+00:00",
+          "started": "2026-10-13T13:59:17.986000+00:00",
+          "ended": "2026-10-13T13:59:19.425000+00:00",
           "error": null
         },
         {
-          "job_id": "75fa7c50-1212-439e-82cf-c860109830c5",
+          "job_id": "e4a12708-ad6e-42cb-80c3-f650c0e01ae8",
           "affected": 0,
-          "started": "2026-10-13T13:36:45.242000+00:00",
-          "ended": "2026-10-13T13:36:47.331000+00:00",
+          "started": "2026-10-13T13:58:56.415000+00:00",
+          "ended": "2026-10-13T13:58:58.094000+00:00",
           "error": null
         },
         {
-          "job_id": "5880b420-8180-408c-9499-36ea16e1c975",
+          "job_id": "16e602e4-5212-415a-b55c-6ea21e64eb25",
           "affected": 0,
-          "started": "2026-10-13T13:36:42.559000+00:00",
-          "ended": "2026-10-13T13:36:43.790000+00:00",
+          "started": "2026-10-13T13:59:08.363000+00:00",
+          "ended": "2026-10-13T13:59:09.996000+00:00",
           "error": null
         },
         {
-          "job_id": "9c25d431-40be-4553-ba6d-c374b984c03c",
-          "affected": 0,
-          "started": "2026-10-13T13:36:56.124000+00:00",
-          "ended": "2026-10-13T13:36:57.489000+00:00",
-          "error": null
-        },
-        {
-          "job_id": "8e181a2a-fa30-42a4-84fd-923a9b919e04",
-          "affected": 0,
-          "started": "2026-10-13T13:36:38.846000+00:00",
-          "ended": "2026-10-13T13:36:40.771000+00:00",
-          "error": null
-        },
-        {
-          "job_id": "09b42c64-3f8f-4588-a1a4-17e4756be865",
-          "affected": 0,
-          "started": "2026-10-13T13:37:04.254000+00:00",
-          "ended": "2026-10-13T13:37:05.741000+00:00",
-          "error": null
-        },
-        {
-          "job_id": "6f165923-1692-47f7-a942-a3066fc9fbf0",
-          "affected": 0,
-          "started": "2026-10-13T13:36:43.952000+00:00",
-          "ended": "2026-10-13T13:36:45.145000+00:00",
-          "error": null
-        },
-        {
-          "job_id": "bce4f70b-9148-45cf-b87a-780f80f002ee",
-          "affected": 0,
-          "started": "2026-10-13T13:36:52.793000+00:00",
-          "ended": "2026-10-13T13:36:54.352000+00:00",
-          "error": null
-        },
-        {
-          "job_id": "d9a1b26a-e77f-4bfc-bcfe-00cd7d28bdd6",
-          "affected": 0,
-          "started": "2026-10-13T13:36:57.701000+00:00",
-          "ended": "2026-10-13T13:36:59.023000+00:00",
-          "error": null
-        },
-        {
-          "job_id": "2e5912e3-dcd4-4b22-93f0-832f811ce20a",
-          "affected": 0,
-          "started": "2026-10-13T13:36:45.335000+00:00",
-          "ended": "2026-10-13T13:36:46.551000+00:00",
-          "error": null
-        },
-        {
-          "job_id": "0bdd5045-89f5-45c4-aa14-060a721231a7",
-          "affected": 0,
-          "started": "2026-10-13T13:36:54.176000+00:00",
-          "ended": "2026-10-13T13:36:55.868000+00:00",
-          "error": null
-        },
-        {
-          "job_id": "07d23cd8-9cd0-4239-8716-448663fea677",
-          "affected": 0,
-          "started": "2026-10-13T13:36:27.703000+00:00",
-          "ended": "2026-10-13T13:36:29.026000+00:00",
-          "error": null
-        },
-        {
-          "job_id": "4901db89-e780-4680-b2c9-c8674ebc42f4",
+          "job_id": "f41a7a56-909d-424e-bb85-bd08a03d6e67",
           "affected": 1,
-          "started": "2026-10-13T13:36:25.711000+00:00",
-          "ended": "2026-10-13T13:36:27.032000+00:00",
+          "started": "2026-10-13T13:58:55.101000+00:00",
+          "ended": "2026-10-13T13:58:56.289000+00:00",
           "error": null
         },
         {
-          "job_id": "3c130519-5e36-41fc-a12b-69577de4b0e8",
+          "job_id": "65a0a9fb-1891-4f21-8986-d2284ddaa415",
           "affected": 0,
-          "started": "2026-10-13T13:36:40.981000+00:00",
-          "ended": "2026-10-13T13:36:42.359000+00:00",
+          "started": "2026-10-13T13:59:31.485000+00:00",
+          "ended": "2026-10-13T13:59:32.692000+00:00",
           "error": null
         },
         {
-          "job_id": "108e0787-5b8a-4047-8ac0-87bbb254ad40",
-          "affected": 1,
-          "started": "2026-10-13T13:36:25.985000+00:00",
-          "ended": "2026-10-13T13:36:27.468000+00:00",
+          "job_id": "75a43daf-18ea-4335-a73c-788a6e71fcc0",
+          "affected": 0,
+          "started": "2026-10-13T13:59:19.817000+00:00",
+          "ended": "2026-10-13T13:59:21.021000+00:00",
+          "error": null
+        },
+        {
+          "job_id": "36a6e797-54e6-41a7-9655-8edf207deda6",
+          "affected": 0,
+          "started": "2026-10-13T13:59:13.204000+00:00",
+          "ended": "2026-10-13T13:59:14.445000+00:00",
           "error": null
         }
       ]
     }
   ],
   "bigquery_doc_quote": "An INSERT DML statement that inserts rows to a table doesn't conflict with any other concurrently running DML statement.",
-  "ended_at": "2026-10-13T13:37:12+00:00",
+  "ended_at": "2026-10-13T13:59:39+00:00",
   "passed": true
 }

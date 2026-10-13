@@ -2,8 +2,8 @@
   "scenario": "s3_send_crash",
   "title": "Provider accepts, worker crashes before recording the receipt",
   "where": "two local OS processes -> Firestore (Google Cloud); test adapters",
-  "started_at": "2026-10-13T13:33:39+00:00",
-  "code_commit": "8be4dce83923",
+  "started_at": "2026-10-13T13:56:56+00:00",
+  "code_commit": "b5b889e11eeb",
   "packages": {
     "google-adk": "2.11.0",
     "google-cloud-aiplatform": "1.165.1",
@@ -18,14 +18,14 @@
   "region": "us-central1",
   "steps": [
     {
-      "at": "2026-10-13T13:34:01.284+00:00",
+      "at": "2026-10-13T13:57:16.618+00:00",
       "what": "[idempotent] process 1 killed after provider acceptance",
       "exit_code": 137,
       "action_status": "DISPATCHING",
       "provider_messages": 1
     },
     {
-      "at": "2026-10-13T13:34:14.850+00:00",
+      "at": "2026-10-13T13:57:33.021+00:00",
       "what": "[idempotent] process 2 ran the dispatcher",
       "exit_code": 0,
       "stdout": [
@@ -36,19 +36,19 @@
       "provider_messages": 1,
       "receipt": {
         "replayed": true,
-        "provider_message_id": "sbx-094b6f344a90",
-        "accepted_at": "2026-10-13T13:33:57.614365+00:00"
+        "accepted_at": "2026-10-13T13:57:13.921844+00:00",
+        "provider_message_id": "sbx-41447f3febcf"
       }
     },
     {
-      "at": "2026-10-13T13:34:25.994+00:00",
+      "at": "2026-10-13T13:57:45.659+00:00",
       "what": "[plain] process 1 killed after provider acceptance",
       "exit_code": 137,
       "action_status": "DISPATCHING",
       "provider_messages": 1
     },
     {
-      "at": "2026-10-13T13:34:38.407+00:00",
+      "at": "2026-10-13T13:57:57.705+00:00",
       "what": "[plain] process 2 ran the dispatcher",
       "exit_code": 0,
       "stdout": [
@@ -81,8 +81,8 @@
       "passed": true,
       "observed": {
         "replayed": true,
-        "provider_message_id": "sbx-094b6f344a90",
-        "accepted_at": "2026-10-13T13:33:57.614365+00:00"
+        "accepted_at": "2026-10-13T13:57:13.921844+00:00",
+        "provider_message_id": "sbx-41447f3febcf"
       }
     },
     {
@@ -101,6 +101,6 @@
       "observed": "NEEDS_RECONCILIATION"
     }
   ],
-  "ended_at": "2026-10-13T13:34:38+00:00",
+  "ended_at": "2026-10-13T13:57:57+00:00",
   "passed": true
 }
