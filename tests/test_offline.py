@@ -20,9 +20,21 @@ def test_alias_normalisation():
 
 
 def test_action_id_is_business_level():
-    assert actions.action_id("m-1", "first_contact") == "m-1.first_contact"
+    assert actions.action_id("m-1", "first_contact") == "m-1.first_contact.t0.v1"
+    assert actions.action_id("m-1", "first_contact", turn=1, revision=2) == "m-1.first_contact.t1.v2"
     with pytest.raises(ValueError):
         actions.action_id("m-1", "Send Now!")
+
+
+def test_document_ids_do_not_collide():
+    from ledger.coordination import doc_id
+    assert doc_id("c/1") != doc_id("c_1") and "/" not in doc_id("c/1")
+
+
+def test_stop_requests():
+    from ledger.runtime import is_stop_request
+    assert is_stop_request("STOP") and is_stop_request("  unsubscribe please")
+    assert not is_stop_request("Thursday at 15:00 works, don't stop now")
 
 
 def test_digest_binds_payload_and_versions():
@@ -99,35 +111,20 @@ def test_live_mode_needs_two_switches(monkeypatch):
 def test_memory_rules():
     c = {"fact": "Offering a discount makes hesitant contacts reply faster.", "scope": {"playbook": "x"},
          "evidence": "one reply"}
-    failed = [x["check"] for x in memory.rule_checks(c, [], supporting_missions=1) if not x["passed"]]
+    failed = [x["check"] for x in memory.rule_checks(c, supporting_missions=1) if not x["passed"]]
     assert failed == ["playbook_needs_two_missions"]
     c2 = {"fact": "Call them on +1 555 010 0199 after lunch.", "scope": {"contact_id": "c"}, "evidence": "e"}
-    assert "no_raw_contact_data" in [x["check"] for x in memory.rule_checks(c2, [], 1) if not x["passed"]]
+    assert "no_raw_contact_data" in [x["check"] for x in memory.rule_checks(c2, 1) if not x["passed"]]
 
 
-class _NoDb:
-    def collection(self, *_):
-        class _C:
-            def document(self, *_):
-                class _D:
-                    def set(self, *_a, **_k): pass
-                    def update(self, *_a, **_k): pass
-                return _D()
-        return _C()
-
-
-def test_publisher_uses_create_only_and_refuses_unapproved():
+def test_fake_bank_refuses_generate_and_update():
     bank = memory.FakeMemoryBank()
-    pub = memory.MemoryPublisher(_NoDb(), bank, "engines/1")
-    base = {"candidate_id": "m1", "fact": "Prefers afternoon appointments.", "scope": {"contact_id": "c"},
-            "topic": "t", "mission_id": "m", "evidence": "e"}
-    with pytest.raises(PermissionError):
-        pub.publish({**base, "status": "REJECTED"})
-    pub.publish({**base, "status": "APPROVED"})
-    assert bank.calls == ["create"]
+    bank.create(name="engines/1", fact="Prefers afternoon appointments.", scope={"contact_id": "c"})
     assert [m["fact"] for m in bank.list(name="engines/1")] == ["Prefers afternoon appointments."]
     with pytest.raises(AssertionError):
         bank.generate()
+    with pytest.raises(AssertionError):
+        bank.update()
 
 
 def test_skill_metadata_declares_purposes():

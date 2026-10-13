@@ -21,6 +21,7 @@ import hashlib
 import json
 import os
 import re
+import time
 from typing import Any
 
 from google.cloud import firestore
@@ -39,10 +40,16 @@ class DispatchRefused(Exception):
     pass
 
 
-def action_id(mission_id: str, purpose: str) -> str:
+MAX_REVISIONS = 3
+
+
+def action_id(mission_id: str, purpose: str, turn: int = 0, revision: int = 1) -> str:
+    """Business action id: mission, declared purpose, conversation turn (replies
+    consumed so far) and revision. The same purpose can be used again on a later
+    turn; a rejected text can be revised (new revision) up to MAX_REVISIONS."""
     if not re.fullmatch(r"[a-z][a-z0-9_]{2,40}", purpose):
         raise ValueError(f"invalid purpose {purpose!r}")
-    return f"{mission_id}.{purpose}"
+    return f"{mission_id}.{purpose}.t{turn}.v{revision}"
 
 
 def payload_digest(a: dict) -> str:
@@ -58,15 +65,23 @@ def record_proposal(db: firestore.Client, lease: Lease, *, purpose: str, channel
     """Persist the proposal (fenced). Returns (action, created)."""
     if purpose not in allowed_purposes:
         raise ValueError(f"purpose {purpose!r} not declared by the loaded skills {allowed_purposes}")
-    aid = action_id(lease.mission_id, purpose)
-    ref = db.collection(ACTIONS).document(aid)
 
-    def _w(tx, _mission):
-        snap = ref.get(transaction=tx)
-        if snap.exists:
-            return snap.to_dict(), False
+    def _w(tx, mission):
+        turn = int(mission.get("turn", 0))
+        ids = [action_id(lease.mission_id, purpose, turn, r) for r in range(1, MAX_REVISIONS + 1)]
+        snaps = [db.collection(ACTIONS).document(i).get(transaction=tx) for i in ids]
+        existing = [x.to_dict() for x in snaps if x.exists]
+        if existing:
+            last = existing[-1]
+            # At-least-once re-execution or a regenerated turn: same record.
+            if last["status"] not in ("REJECTED", "NEEDS_REVIEW") or last["body"] == body:
+                return last, False
+            if len(existing) >= MAX_REVISIONS:
+                return last, False
+        aid = ids[len(existing)]
         doc = {
             "action_id": aid, "mission_id": lease.mission_id, "purpose": purpose,
+            "turn": turn, "revision": len(existing) + 1,
             "channel": channel, "recipient": recipient, "contact_id": contact_id,
             "body": body, "model_note": note, "policy_version": policy_version,
             "persona_sha": persona_sha, "skills_sha": skills_sha,
@@ -74,7 +89,7 @@ def record_proposal(db: firestore.Client, lease: Lease, *, purpose: str, channel
             "proposed_generation": lease.generation, "first_tool_call": fc_ref,
             "attempts": 0,
         }
-        tx.set(ref, doc)
+        tx.set(db.collection(ACTIONS).document(aid), doc)
         return doc, True
 
     return coordination.fenced(db, lease, _w)
@@ -102,7 +117,7 @@ def set_verdict(db: firestore.Client, lease: Lease, aid: str, verdict: dict) -> 
 
 
 def is_suppressed(db: firestore.Client, contact_id: str, tx=None) -> bool:
-    ref = db.collection(SUPPRESSION).document(contact_id.replace("/", "_"))
+    ref = db.collection(SUPPRESSION).document(coordination.doc_id(contact_id))
     return (ref.get(transaction=tx) if tx else ref.get()).exists
 
 
@@ -146,6 +161,8 @@ def dispatch(db: firestore.Client, lease: Lease, aid: str, adapter, thread_token
     if mode not in ("first-attempt", "retry-same-key"):
         return {**a, "dispatch_mode": mode}
 
+    if os.environ.get("LEDGER_FAULT") == "slow_before_send":  # scenario 3: slow but alive
+        time.sleep(float(os.environ.get("LEDGER_FAULT_SLEEP", "8")))
     receipt = adapter.send(idempotency_key=aid, to=a["recipient"], body=a["body"],
                            thread_token=thread_token, mission_id=a["mission_id"])
     trace.record(db, lease.mission_id, "provider.accepted", action_id=aid,
@@ -155,19 +172,25 @@ def dispatch(db: firestore.Client, lease: Lease, aid: str, adapter, thread_token
                      action_id=aid)
         os._exit(137)
 
-    # The receipt is a fact about the outside world: record it even if our
-    # lease lapsed meanwhile, but only over a DISPATCHING record.
+    # The receipt is a fact about the outside world: always keep it. Over a
+    # DISPATCHING record it completes the send. If another worker already moved
+    # the action on (e.g. to NEEDS_RECONCILIATION while this one was slow), it is
+    # stored as `late_receipt` for the reconciler and the real status is returned.
     @firestore.transactional
     def _done(tx):
         cur = ref.get(transaction=tx).to_dict()
         if cur["status"] == "DISPATCHING":
             tx.update(ref, {"status": "SENT", "receipt": receipt.__dict__, "sent_at": wall_now()})
+            return "SENT"
+        tx.update(ref, {"late_receipt": receipt.__dict__, "late_receipt_at": wall_now()})
         return cur["status"]
 
-    _done(db.transaction())
-    trace.record(db, lease.mission_id, "dispatch.sent", action_id=aid,
+    final = _done(db.transaction())
+    kind = "dispatch.sent" if final == "SENT" else "dispatch.late_receipt"
+    trace.record(db, lease.mission_id, kind, action_id=aid, status=final,
                  provider_message_id=receipt.provider_message_id, mode=mode)
-    return {**a, "status": "SENT", "receipt": receipt.__dict__, "dispatch_mode": mode}
+    key = "receipt" if final == "SENT" else "late_receipt"
+    return {**a, "status": final, key: receipt.__dict__, "dispatch_mode": mode}
 
 
 def approved_unsent(db: firestore.Client, mission_id: str) -> list[str]:

@@ -21,6 +21,7 @@ an action may run: a late BigQuery status cannot cause a second execution.
 from __future__ import annotations
 
 import dataclasses
+import urllib.parse
 import datetime as dt
 from typing import Any, Callable
 
@@ -53,6 +54,11 @@ class Lease:
     worker_id: str
     generation: int
     expires_at: dt.datetime
+
+
+def doc_id(key: str) -> str:
+    """Collision-free Firestore document id for an arbitrary key ("c/1" != "c_1")."""
+    return urllib.parse.quote(key, safe="")
 
 
 def client(project: str | None = None) -> firestore.Client:
@@ -103,6 +109,13 @@ def fenced(db: firestore.Client, lease: Lease,
     return _tx(db.transaction(max_attempts=TX_ATTEMPTS))
 
 
+def renew_if_due(db: firestore.Client, lease: Lease, seconds: int) -> Lease:
+    """Extend the lease once less than half of it remains. Fenced, so a worker
+    that already lost its generation finds out here and stops."""
+    remaining = (lease.expires_at - wall_now()).total_seconds()
+    return renew(db, lease, seconds) if remaining < seconds / 2 else lease
+
+
 def renew(db: firestore.Client, lease: Lease, seconds: int) -> Lease:
     expires = wall_now() + dt.timedelta(seconds=seconds)
     ref = db.collection(MISSIONS).document(lease.mission_id)
@@ -123,7 +136,7 @@ def release(db: firestore.Client, lease: Lease, updates: dict) -> None:
 
 def reserve_contact(db: firestore.Client, contact_id: str, mission_id: str,
                     business_timeout: dt.timedelta) -> dict:
-    ref = db.collection(RESERVATIONS).document(contact_id.replace("/", "_"))
+    ref = db.collection(RESERVATIONS).document(doc_id(contact_id))
 
     @firestore.transactional
     def _tx(tx: firestore.Transaction) -> dict:
@@ -147,14 +160,14 @@ def reserve_contact(db: firestore.Client, contact_id: str, mission_id: str,
 
 def reservation_held_by(db: firestore.Client, contact_id: str, mission_id: str,
                         tx: firestore.Transaction | None = None) -> bool:
-    ref = db.collection(RESERVATIONS).document(contact_id.replace("/", "_"))
+    ref = db.collection(RESERVATIONS).document(doc_id(contact_id))
     data = (ref.get(transaction=tx) if tx else ref.get()).to_dict()
     return bool(data and data.get("status") == "HELD" and data.get("mission_id") == mission_id
                 and data["business_expires_at"] > wall_now())
 
 
 def release_contact(db: firestore.Client, contact_id: str, mission_id: str, reason: str) -> bool:
-    ref = db.collection(RESERVATIONS).document(contact_id.replace("/", "_"))
+    ref = db.collection(RESERVATIONS).document(doc_id(contact_id))
 
     @firestore.transactional
     def _tx(tx: firestore.Transaction) -> bool:

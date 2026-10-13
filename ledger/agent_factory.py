@@ -95,6 +95,9 @@ def build(ctx: MissionCtx, model) -> tuple[App, list[str]]:
             trace.record(db, mission["mission_id"], "gate.verdict", action_id=a["action_id"],
                          decision=verdict["decision"], stage=verdict["stage"],
                          reasons=verdict["reasons"], reviewer_mode=verdict.get("reviewer_mode"))
+            if verdict.get("usage"):
+                trace.record(db, mission["mission_id"], "model.usage", source="reviewer",
+                             model=verdict["reviewer_mode"], **verdict["usage"])
         return {"action_id": a["action_id"], "status": a["status"],
                 "reasons": (a.get("gate") or {}).get("reasons", [])}
 

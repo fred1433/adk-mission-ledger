@@ -11,7 +11,7 @@ import urllib.request
 
 from fastapi import FastAPI, HTTPException, Request
 
-from . import coordination, inbound, runtime, trace
+from . import coordination, inbound, intake, runtime, trace
 from .config import build_info, settings
 
 app = FastAPI(title="mission-ledger worker")
@@ -51,6 +51,29 @@ async def inbound_reply(req: Request):
 @app.post("/tasks/reconcile-wakes")
 def reconcile():
     return {"woken": inbound.reconcile_pending_wakes(coordination.client(settings().project))}
+
+
+@app.post("/tasks/intake")
+def run_intake():
+    """Cloud Scheduler, every minute: BigQuery missions -> start tasks."""
+    return intake.run(coordination.client(settings().project))
+
+
+@app.post("/tasks/sweep")
+def sweep():
+    """Cloud Scheduler: missions left RUNNING after their lease expired -> review."""
+    return {"sent_to_review": runtime.sweep_interrupted(coordination.client(settings().project))}
+
+
+@app.get("/diag/model-permission")
+def model_permission():
+    """Does this process's identity hold aiplatform.endpoints.predict right now?
+    testIamPermissions only; no model is called."""
+    token = json.loads(_metadata("instance/service-accounts/default/token"))["access_token"]
+    got = _test_permissions(
+        f"https://cloudresourcemanager.googleapis.com/v3/projects/{settings().project}:testIamPermissions",
+        token, ["aiplatform.endpoints.predict"])
+    return {"process": trace.process_identity(), "granted": got}
 
 
 def _metadata(path: str) -> str:

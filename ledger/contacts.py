@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import dataclasses
 import re
+import urllib.parse
 
 ALIAS_COLLECTION = "contact_aliases"
 
@@ -53,4 +54,4 @@ def register(db, contact_id: str, aliases: list[str]) -> None:
 
 
 def _doc_id(alias_key: str) -> str:
-    return alias_key.replace("/", "_")
+    return urllib.parse.quote(alias_key, safe="")

@@ -46,7 +46,13 @@ def seed_contact(contact_id: str, aliases: list[str]) -> None:
 
 
 def seed_mission(mission_id: str, kind: str, alias: str, facts: dict, prompt: str,
-                 skills=("follow-up-writer", "reply-triage")) -> dict:
+                 skills=("follow-up-writer", "reply-triage"), local_runner: bool = False) -> dict:
+    """Write the BigQuery row. With local_runner=True the Firestore execution
+    record is created first (QUEUED), so the scheduled intake leaves the
+    mission to the local scenario process instead of starting it on Cloud Run."""
+    if local_runner:
+        db().collection("missions").document(mission_id).set(
+            {"mission_id": mission_id, "status": "QUEUED", "claimed_by": "local scenario"})
     row = {"mission_id": mission_id, "created_at": dt.datetime.now(dt.timezone.utc).isoformat(),
            "kind": kind, "prompt": prompt, "persona": "account-coordinator",
            "skills": list(skills), "contact_alias": alias, "facts_json": json.dumps(facts),
@@ -56,7 +62,7 @@ def seed_mission(mission_id: str, kind: str, alias: str, facts: dict, prompt: st
 
 
 class Evidence:
-    def __init__(self, name: str, title: str, where: str):
+    def __init__(self, name: str, title: str, where: str, paid_spend: str = "none"):
         self.path = ROOT / "evidence" / f"{name}.json"
         self.doc = {
             "scenario": name, "title": title, "where": where,
@@ -64,7 +70,9 @@ class Evidence:
             "code_commit": git_commit(),
             "packages": {p: md.version(p) for p in PACKAGES},
             "model_mode": settings().model_mode,
-            "paid_model_calls": settings().paid_models_enabled,
+            # What this run paid for, wherever it ran (worker or local).
+            "paid_spend": paid_spend,
+            "local_process_paid_model_calls": settings().paid_models_enabled,
             "project": settings().project, "region": settings().location,
             "steps": [], "assertions": [],
         }

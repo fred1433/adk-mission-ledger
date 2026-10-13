@@ -16,4 +16,14 @@ URL=$(gcloud run services describe ledger-worker --region="$REGION" --project="$
 gcloud run services update ledger-worker --region="$REGION" --project="$PROJECT" --update-env-vars="LEDGER_WORKER_URL=${URL}" >/dev/null
 gcloud run services add-iam-policy-binding ledger-worker --region="$REGION" --project="$PROJECT" \
   --member="serviceAccount:${WORKER}" --role=roles/run.invoker >/dev/null
+# Intake every minute, sweep of interrupted missions every 2 minutes.
+for job in "mission-intake|* * * * *|/tasks/intake" "mission-sweep|*/2 * * * *|/tasks/sweep"; do
+  IFS='|' read -r NAME CRON PATH_ <<<"$job"
+  gcloud scheduler jobs create http "$NAME" --location="$REGION" --project="$PROJECT" --schedule="$CRON" \
+    --uri="${URL}${PATH_}" --http-method=POST --oidc-service-account-email="$WORKER" \
+    --oidc-token-audience="$URL" --quiet >/dev/null 2>&1 \
+  || gcloud scheduler jobs update http "$NAME" --location="$REGION" --project="$PROJECT" --schedule="$CRON" \
+    --uri="${URL}${PATH_}" --http-method=POST --oidc-service-account-email="$WORKER" \
+    --oidc-token-audience="$URL" --quiet >/dev/null
+done
 echo "$URL"

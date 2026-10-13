@@ -30,7 +30,7 @@ LEASE_S = 4
 
 def child(action_id: str, adapter_name: str) -> None:
     d = db()
-    mid = action_id.rsplit(".", 1)[0]
+    mid = d.collection(actions.ACTIONS).document(action_id).get().get("mission_id")
     lease = coordination.acquire_lease(d, mid, f"proc-{os.getpid()}", LEASE_S)
     ad = adapters.PlainMailbox(d) if adapter_name == "plain" else adapters.IdempotentMailbox(d)
     out = actions.dispatch(d, lease, action_id, ad, thread_token=f"thr-{mid}")
@@ -60,10 +60,17 @@ def provider_count(d, aid: str) -> int:
     return len(list(by_key)) + len(list(by_ref))
 
 
-def run_child(aid: str, adapter_name: str, fault: bool) -> subprocess.CompletedProcess:
-    env = {**os.environ, "LEDGER_FAULT": "after_provider_accept" if fault else ""}
+def run_child(aid: str, adapter_name: str, fault: bool | str) -> subprocess.CompletedProcess:
+    env = {**os.environ, "LEDGER_FAULT": ("after_provider_accept" if fault is True else (fault or ""))}
     return subprocess.run([sys.executable, "-W", "ignore", __file__, "child", aid, adapter_name],
                           env=env, capture_output=True, text=True, cwd=ROOT / "scenarios")
+
+
+def spawn_child(aid: str, adapter_name: str, fault: str) -> subprocess.Popen:
+    env = {**os.environ, "LEDGER_FAULT": fault, "LEDGER_FAULT_SLEEP": str(LEASE_S + 6)}
+    return subprocess.Popen([sys.executable, "-W", "ignore", __file__, "child", aid, adapter_name],
+                            env=env, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
+                            cwd=ROOT / "scenarios")
 
 
 def main() -> bool:
@@ -91,6 +98,39 @@ def main() -> bool:
         if name == "idempotent":
             ev.check("[idempotent] retry reused the original provider message",
                      (st2.get("receipt") or {}).get("replayed") is True, st2.get("receipt"))
+
+    # Slow but alive: process 1 claims, then stalls past its lease before
+    # calling the provider; process 2 finds DISPATCHING on a plain adapter and
+    # parks it for reconciliation; process 1 finally sends. Its receipt must
+    # not be lost, and it must not report SENT.
+    aid = prepare(d, rid, "slow")
+    p1 = spawn_child(aid, "plain", "slow_before_send")
+    time.sleep(2)
+    claimed = d.collection(actions.ACTIONS).document(aid).get().to_dict()["status"]
+    time.sleep(LEASE_S + 1)
+    p2 = run_child(aid, "plain", fault=False)
+    out1, _ = p1.communicate(timeout=60)
+    st = d.collection(actions.ACTIONS).document(aid).get().to_dict()
+    ev.step("[slow] process 1 stalled past its lease, process 2 ran, then process 1 sent",
+            status_after_claim=claimed, process2=p2.stdout.strip().splitlines()[-1:],
+            process1=out1.strip().splitlines()[-1:], final_status=st["status"],
+            late_receipt=st.get("late_receipt"), provider_messages=provider_count(d, aid))
+    ev.check("[slow] process 2 parked it for reconciliation",
+             "NEEDS_RECONCILIATION" in " ".join(p2.stdout.splitlines()[-1:]), p2.stdout.strip()[-80:])
+    ev.check("[slow] late provider receipt kept on the action", bool(st.get("late_receipt")),
+             st.get("late_receipt"))
+    ev.check("[slow] process 1 reports the real status, not SENT",
+             "RESULT NEEDS_RECONCILIATION" in out1, out1.strip().splitlines()[-1:])
+
+    # Draft publisher: a replay returns the same draft, no second effect.
+    pub = adapters.DraftPublisher(d)
+    r1 = pub.send(idempotency_key=f"draft-{rid}", to="Draft title", body="draft body", thread_token="",
+                  mission_id=f"m-{rid}-draft")
+    r2 = pub.send(idempotency_key=f"draft-{rid}", to="Draft title", body="draft body", thread_token="",
+                  mission_id=f"m-{rid}-draft")
+    ev.check("[draft] replay returns the same draft without a second write",
+             r1.provider_message_id == r2.provider_message_id and r2.replayed and not r1.replayed,
+             {"first": r1.__dict__, "second": r2.__dict__})
     return ev.save()
 
 

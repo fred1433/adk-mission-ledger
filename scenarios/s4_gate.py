@@ -42,9 +42,9 @@ def main() -> bool:
     seed_mission(mid, "unsupported_promise", alias,
                  {"first_name": "Sam", "slots": ["Tuesday 10:00", "Thursday 15:00"]},
                  "Follow up with the contact who asked about onboarding. Offer the slots in the facts.",
-                 skills=("follow-up-writer",))
+                 skills=("follow-up-writer",), local_runner=True)
     out = asyncio.run(runtime.start(mid))
-    a = d.collection(actions.ACTIONS).document(f"{mid}.first_contact").get().to_dict()
+    a = d.collection(actions.ACTIONS).document(actions.action_id(mid, "first_contact")).get().to_dict()
     t = trace.read(d, mid)
     tools = next(e["tools"] for e in t if e["kind"] == "agent.equipped")
     ev.step("A: mission run with a model that over-promises and asks to skip review",
@@ -99,6 +99,33 @@ def main() -> bool:
     ev.check("D: deterministic REJECT, reviewer not consulted",
              v["decision"] == "REJECT" and v["stage"] == "deterministic" and v["reviewer_mode"] is None,
              v["reasons"])
+
+    # E: revising a rejected text, and reusing a purpose on a later turn
+    mid_e, cid_e = f"m-{rid}-revise", f"c-{rid}-kim"
+    coordination.reserve_contact(d, cid_e, mid_e, dt.timedelta(hours=1))
+    lease = coordination.acquire_lease(d, mid_e, "worker-e", 60)
+    common = dict(purpose="first_contact", channel="email", recipient=f"kim.{rid}@example.com",
+                  contact_id=cid_e, note="", allowed_purposes=["first_contact"],
+                  policy_version="outbound-policy-v1", persona_sha="p", skills_sha="s", fc_ref={})
+    v1, _ = actions.record_proposal(d, lease, body="Hi Kim, I guarantee a start on the 14th.", **common)
+    actions.set_verdict(d, lease, v1["action_id"], {"decision": "REJECT", "reasons": ["fixture"],
+                                                    "reviewer_mode": "fixture:inline", "stage": "reviewer"})
+    same, created_same = actions.record_proposal(d, lease, body="Hi Kim, I guarantee a start on the 14th.", **common)
+    v2, created_v2 = actions.record_proposal(
+        d, lease, body="Hi Kim, a coordinator will confirm the start date with you.", **common)
+    coordination.fenced(d, lease, lambda tx, _m: tx.update(
+        d.collection("missions").document(mid_e), {"turn": 1}))
+    t1, created_t1 = actions.record_proposal(
+        d, lease, body="Hi Kim, following up on your answer: Thursday works on our side.", **common)
+    ev.step("E: rejected text, same text again, revised text, same purpose on the next turn",
+            ids=[v1["action_id"], same["action_id"], v2["action_id"], t1["action_id"]])
+    ev.check("E: re-proposing the rejected text creates nothing new", not created_same and
+             same["action_id"] == v1["action_id"], same["action_id"])
+    ev.check("E: a revised text gets a new revision id", created_v2 and v2["action_id"].endswith(".t0.v2"),
+             v2["action_id"])
+    ev.check("E: the same purpose on a later turn gets a new id", created_t1 and
+             t1["action_id"].endswith(".t1.v1"), t1["action_id"])
+    coordination.release(d, lease, {})
     return ev.save(fetched_mission_kind=fetch_mission(mid)["kind"])
 
 

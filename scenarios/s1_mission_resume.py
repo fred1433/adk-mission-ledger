@@ -93,7 +93,9 @@ def _main() -> bool:
     kind = "consultation_follow_up"
     ev = Evidence("s1_mission_resume" + ("_live" if LIVE else ""),
                   "One mission across a worker restart" + (" (live Gemini)" if LIVE else ""),
-                  where="Cloud Run worker + Cloud Tasks + Firestore + BigQuery + Agent Platform Sessions")
+                  where="Cloud Run worker + Cloud Scheduler/Cloud Tasks + Firestore + BigQuery + Agent Platform Sessions",
+                  paid_spend=("Gemini on the worker (agent and reviewer), capped at "
+                              "LEDGER_MAX_MODEL_CALLS per process" if LIVE else "none"))
     if LIVE:
         ev.doc["model_mode"] = "live (worker env)"
     _CURRENT["ev"] = ev
@@ -108,13 +110,12 @@ def _main() -> bool:
               + json.dumps(facts))
     mid_a, mid_b = f"m-{rid}-a", f"m-{rid}-b"
     seed_mission(mid_a, kind, email, facts, prompt)
-    seed_mission(mid_b, kind, phone, facts, prompt)
     _CURRENT["extra"] = {"mission_id": mid_a, "competing_mission_id": mid_b}
-    ev.step("mission rows written to BigQuery", missions=[mid_a, mid_b],
+    ev.step("mission row written to BigQuery", mission=mid_a,
             table=f"{settings().project}.{settings().bq_dataset}.missions")
-
-    task = tasks.enqueue("/tasks/start", {"mission_id": mid_a}, name=f"start-{mid_a}")
-    ev.step("start task enqueued", task=task.rsplit("/", 1)[-1])
+    got = post("/tasks/intake", {})
+    ev.step("intake on Cloud Run read BigQuery and enqueued start tasks (the scheduled intake may "
+            "have done it first; task names make that harmless)", intake=got)
     doc_a = wait_status(d, mid_a, {"WAITING_REPLY", "NEEDS_REVIEW", "DONE"})
     ev.check("A parked waiting for a reply", doc_a["status"] == "WAITING_REPLY", doc_a["status"])
     parked_by = doc_a.get("parked_by", {})
@@ -124,7 +125,9 @@ def _main() -> bool:
     msgs = provider_messages(d, mid_a)
     ev.check("first message accepted by the provider once", len(msgs) == 1, [m["body"] for m in msgs])
 
-    tasks.enqueue("/tasks/start", {"mission_id": mid_b}, name=f"start-{mid_b}")
+    seed_mission(mid_b, kind, phone, facts, prompt)
+    got_b = post("/tasks/intake", {})
+    ev.step("competing mission row written; intake run again", intake=got_b)
     doc_b = wait_status(d, mid_b, {"BLOCKED_CONTACT_RESERVED", "WAITING_REPLY", "NEEDS_REVIEW"})
     ev.check("competing mission via the phone alias refused while A waits",
              doc_b["status"] == "BLOCKED_CONTACT_RESERVED" and doc_b.get("blocked_by") == mid_a,

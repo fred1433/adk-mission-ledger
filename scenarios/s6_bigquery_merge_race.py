@@ -68,16 +68,24 @@ def main() -> bool:
         starts = sorted(j["started"] for j in jobs if j["started"])
         ends = sorted(j["ended"] for j in jobs if j["ended"])
         inserted = sum(1 for j in jobs if j["affected"] == 1)
+        # Which statements actually ran at the same time? BigQuery runs at
+        # most 2 mutating DML statements per table concurrently and queues the
+        # rest, so most of the 20 never overlap.
+        overlapping = sorted({j["job_id"] for j in jobs for k in jobs if j is not k and j["started"]
+                              and k["started"] and j["started"] < k["ended"] and k["started"] < j["ended"]})
+        inserters = [j["job_id"] for j in jobs if j["affected"] == 1]
         rnd = {"round": r, "contact": contact, "statements": N, "rows_for_contact": len(rows),
                "statements_reporting_insert": inserted,
                "errors": sum(1 for j in jobs if j["error"]),
                "overlap": bool(starts and ends and starts[-1] < ends[0]),
+               "jobs_overlapping_another": overlapping, "jobs_that_inserted": inserters,
                "first_start": starts[0] if starts else None, "last_start": starts[-1] if starts else None,
                "first_end": ends[0] if ends else None, "jobs": jobs}
         rounds.append(rnd)
-        ev.step(f"round {r}: {N} concurrent insert-only MERGE on one contact",
+        ev.step(f"round {r}: {N} insert-only MERGE submitted at once on one contact",
                 rows_for_contact=len(rows), statements_reporting_insert=inserted,
-                errors=rnd["errors"], all_started_before_first_ended=rnd["overlap"])
+                errors=rnd["errors"], jobs_overlapping_another=len(overlapping),
+                inserters_were_overlapping=all(i in overlapping for i in inserters))
         if len(rows) > 1:
             break
         time.sleep(1)
@@ -99,9 +107,10 @@ def main() -> bool:
         fs = list(pool.map(reserve, range(N)))
     ev.step(f"Firestore: {N} concurrent transactional reservations", results=fs)
     ev.check("Firestore: exactly one winner", fs.count("won") == 1, fs.count("won"))
-    return ev.save(bigquery_rounds=rounds,
-                   bigquery_doc_quote="An INSERT DML statement that inserts rows to a table doesn't "
-                                      "conflict with any other concurrently running DML statement.")
+    return ev.save(bigquery_rounds=rounds, bigquery_doc_quotes=[
+        "A MERGE DML statement does not conflict with other concurrently running DML statements as long as "
+        "the statement only inserts rows and does not delete or update any existing rows.",
+        "BigQuery runs up to 2 of them concurrently, after which up to 20 are queued as PENDING."])
 
 
 if __name__ == "__main__":

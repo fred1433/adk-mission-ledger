@@ -42,6 +42,8 @@ class FixtureLlm(BaseLlm):
         if turn >= len(self.script):
             raise RuntimeError(f"fixture {self.model} has no turn {turn}")
         step = self.script[turn]
+        if "raise" in step:  # scripted model failure (scenario 7)
+            raise RuntimeError(step["raise"])
         if "text" in step:
             part = types.Part(text=_fill(step["text"], self.mission, last))
         else:

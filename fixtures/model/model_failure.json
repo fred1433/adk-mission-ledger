@@ -1,0 +1,6 @@
+{
+  "about": "Hand-written turns: the model call fails on the first turn (scenario 7).",
+  "turns": [
+    {"raise": "scripted model failure: 403 PERMISSION_DENIED on the model endpoint"}
+  ]
+}

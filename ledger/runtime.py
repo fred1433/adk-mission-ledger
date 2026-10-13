@@ -3,12 +3,17 @@
 Each handler is a bounded segment: take the execution lease, equip an empty
 agent, run until it parks or finishes, dispatch approved actions, write the
 new state, release the lease, discard the agent. Nothing is kept in process
-memory between segments.
+memory between segments. The lease is renewed on every ADK event and before
+each dispatch. Any exception inside a segment closes the mission as
+NEEDS_REVIEW under the same lease, so a crashed model call never leaves a
+mission RUNNING; if the process itself dies, `sweep_interrupted` (scheduled)
+finds the expired lease and does the same.
 """
 
 from __future__ import annotations
 
 import datetime as dt
+import re
 import uuid
 
 from google.adk.runners import Runner
@@ -21,11 +26,13 @@ from . import (actions, adapters, agent_factory, contacts, coordination, manifes
 from .agent_factory import APP_NAME, MissionCtx
 from .clock import wall_now
 from .config import settings
-from .coordination import MISSIONS, ContactReserved
+from .coordination import MISSIONS, ContactReserved, FencingError
 
 SESSION_USER = "mission-runner"
 THREADS = "threads"
 INBOUND = "inbound_events"
+INTERRUPTED = {"RUNNING", "RESUMING"}
+STOP_REQUEST = re.compile(r"^\s*(stop|unsubscribe|remove me|do not contact)\b", re.I)
 _LOCAL_SESSIONS = InMemorySessionService()
 
 
@@ -37,6 +44,10 @@ def session_service():
     return _LOCAL_SESSIONS  # unit tests only; traces record which backend ran
 
 
+def is_stop_request(body: str) -> bool:
+    return bool(STOP_REQUEST.search(body or ""))
+
+
 def _worker_id() -> str:
     p = trace.process_identity()
     return f"{p.get('revision') or 'local'}/{p.get('instance') or p.get('host')}/{p['pid']}/{uuid.uuid4().hex[:6]}"
@@ -44,9 +55,13 @@ def _worker_id() -> str:
 
 def _mission(db, mission_id: str) -> dict:
     row = missions_bq.fetch_mission(mission_id)
-    row["contact_id"] = contacts.resolve(db, row["contact_alias"]).contact_id
-    row["contact_known"] = contacts.resolve(db, row["contact_alias"]).known
+    ref = contacts.resolve(db, row["contact_alias"])
+    row["contact_id"], row["contact_known"] = ref.contact_id, ref.known
     return row
+
+
+def _renew(ctx: MissionCtx) -> None:
+    ctx.lease = coordination.renew_if_due(ctx.db, ctx.lease, settings().lease_seconds)
 
 
 async def _segment(ctx: MissionCtx, model, session_id: str, message: types.Content,
@@ -60,6 +75,7 @@ async def _segment(ctx: MissionCtx, model, session_id: str, message: types.Conte
     pending, final_text, inv, model_error = None, None, invocation_id, None
     async for ev in runner.run_async(user_id=SESSION_USER, session_id=session_id,
                                      invocation_id=invocation_id, new_message=message):
+        _renew(ctx)
         if inv is None and ev.invocation_id:
             inv = ev.invocation_id
             ref = ctx.db.collection(MISSIONS).document(mid)
@@ -69,6 +85,11 @@ async def _segment(ctx: MissionCtx, model, session_id: str, message: types.Conte
                          function_call_id=fc.id)
             if ev.long_running_tool_ids and fc.id in ev.long_running_tool_ids:
                 pending = fc.id
+        if ev.usage_metadata:
+            u = ev.usage_metadata
+            trace.record(ctx.db, mid, "model.usage", source="agent", model=model.model,
+                         prompt=u.prompt_token_count, cached=u.cached_content_token_count,
+                         output=u.candidates_token_count, thoughts=u.thoughts_token_count)
         if ev.error_code:
             model_error = f"{ev.error_code}: {ev.error_message or ''}".strip()
             trace.record(ctx.db, mid, "agent.model_error", error=model_error)
@@ -84,10 +105,28 @@ async def _segment(ctx: MissionCtx, model, session_id: str, message: types.Conte
 def _dispatch_all(ctx: MissionCtx) -> list[dict]:
     out = []
     for aid in actions.approved_unsent(ctx.db, ctx.mission["mission_id"]):
+        _renew(ctx)
         channel = ctx.db.collection(actions.ACTIONS).document(aid).get().get("channel")
         out.append(actions.dispatch(ctx.db, ctx.lease, aid,
                                     adapters.for_channel(ctx.db, channel), ctx.thread_token))
     return out
+
+
+async def _guarded(ctx: MissionCtx, model, session_id, message, invocation_id, event_ref) -> dict:
+    """Run segment + dispatch; any failure closes the mission for review."""
+    try:
+        seg = await _segment(ctx, model, session_id, message, invocation_id)
+        sent = _dispatch_all(ctx)
+    except FencingError:
+        raise  # we are no longer the owner: write nothing more
+    except Exception as e:  # noqa: BLE001 - model, tool or provider failure
+        err = f"{type(e).__name__}: {str(e)[:300]}"
+        trace.record(ctx.db, ctx.mission["mission_id"], "segment.failed", error=err,
+                     generation=ctx.lease.generation)
+        coordination.release(ctx.db, ctx.lease, {"status": "NEEDS_REVIEW", "reason": err})
+        missions_bq.report(ctx.mission["mission_id"], "NEEDS_REVIEW", {"segment_failed": err})
+        return {"mission_id": ctx.mission["mission_id"], "status": "NEEDS_REVIEW", "error": err}
+    return _close_segment(ctx, seg, sent, event_ref)
 
 
 async def start(mission_id: str) -> dict:
@@ -128,7 +167,7 @@ async def start(mission_id: str) -> dict:
 
     def _w(tx, _d):
         tx.set(mref, {"mission_id": mission_id, "status": "RUNNING", "kind": mission["kind"],
-                      "contact_id": mission["contact_id"], "session_id": sess.id,
+                      "contact_id": mission["contact_id"], "session_id": sess.id, "turn": 0,
                       "manifest": pinned, "thread_token": thread_token, "started_at": wall_now()},
                merge=True)
         tx.set(db.collection(THREADS).document(thread_token), {"mission_id": mission_id})
@@ -138,9 +177,7 @@ async def start(mission_id: str) -> dict:
 
     ctx = MissionCtx(db, lease, mission, pinned, thread_token)
     prompt = types.Content(role="user", parts=[types.Part(text=mission["prompt"])])
-    seg = await _segment(ctx, model, sess.id, prompt, None)
-    sent = _dispatch_all(ctx)
-    return _close_segment(ctx, seg, sent, event_ref=None)
+    return await _guarded(ctx, model, sess.id, prompt, None, None)
 
 
 async def resume(mission_id: str, event_id: str) -> dict:
@@ -167,6 +204,10 @@ async def resume(mission_id: str, event_id: str) -> dict:
                                          "reason": "reply arrived after the reservation ended"})
         trace.record(db, mission_id, "resume.reconcile", event_id=event_id)
         return {"mission_id": mission_id, "status": "NEEDS_RECONCILIATION"}
+    if is_stop_request(ev.get("body", "")):
+        db.collection(actions.SUPPRESSION).document(coordination.doc_id(doc["contact_id"])).set(
+            {"contact_id": doc["contact_id"], "source_event": event_id, "at": wall_now()})
+        trace.record(db, mission_id, "contact.suppressed", event_id=event_id)
 
     model, descriptor = models.for_mission(mission)
     mismatches = manifest.verify(doc["manifest"], mission, descriptor)
@@ -175,12 +216,14 @@ async def resume(mission_id: str, event_id: str) -> dict:
         coordination.release(db, lease, {"status": "NEEDS_REVIEW", "manifest_mismatch": mismatches})
         return {"mission_id": mission_id, "status": "NEEDS_REVIEW", "mismatches": mismatches}
 
-    coordination.fenced(db, lease, lambda tx, _d: tx.update(mref, {"status": "RESUMING"}))
+    # One more reply consumed: new turn, so the same purpose may be used again.
+    coordination.fenced(db, lease, lambda tx, _d: tx.update(
+        mref, {"status": "RESUMING", "turn": firestore.Increment(1)}))
+    ctx = MissionCtx(db, lease, mission, doc["manifest"], doc["thread_token"])
     # The reviewer judges claims against mission facts AND what the contact
     # actually wrote. Live run 3 showed a correct confirmation rejected
     # because the reviewer only saw the original facts.
     mission["verified_inbound"] = [{"from": ev["from"], "body": ev["body"]}]
-    ctx = MissionCtx(db, lease, mission, doc["manifest"], doc["thread_token"])
     reply = types.Content(role="user", parts=[types.Part(function_response=types.FunctionResponse(
         id=doc["pending_call_id"], name="wait_for_reply",
         response={"reply": ev["body"], "from": ev["from"],
@@ -188,12 +231,7 @@ async def resume(mission_id: str, event_id: str) -> dict:
     trace.record(db, mission_id, "resume.start", event_id=event_id,
                  invocation_id=doc["invocation_id"], pending_call_id=doc["pending_call_id"],
                  parked_by=doc.get("parked_by"))
-    seg = await _segment(ctx, model, doc["session_id"], reply, doc["invocation_id"])
-    sent = _dispatch_all(ctx)
-    return _close_segment(ctx, seg, sent, event_ref=eref)
-
-
-INTERRUPTED = {"RUNNING", "RESUMING"}
+    return await _guarded(ctx, model, doc["session_id"], reply, doc["invocation_id"], eref)
 
 
 def _interrupted(db, lease, doc: dict) -> dict:
@@ -209,6 +247,29 @@ def _interrupted(db, lease, doc: dict) -> dict:
     return {"mission_id": lease.mission_id, "status": "NEEDS_REVIEW"}
 
 
+def sweep_interrupted(db: firestore.Client) -> list[dict]:
+    """Scheduled. Send every RUNNING/RESUMING mission whose lease has expired
+    to review. Lease acquisition is the test: it only succeeds once the old
+    owner's lease is over, so a live segment is never touched."""
+    out = []
+    q = db.collection(MISSIONS).where(filter=firestore.FieldFilter("status", "in", sorted(INTERRUPTED)))
+    for snap in q.stream():
+        lease_doc = (snap.to_dict().get("lease") or {})
+        exp = lease_doc.get("expires_at")
+        if exp is not None and exp > wall_now():
+            continue
+        try:
+            lease = coordination.acquire_lease(db, snap.id, "sweeper/" + uuid.uuid4().hex[:6], 60)
+        except coordination.LeaseUnavailable:
+            continue
+        doc = db.collection(MISSIONS).document(snap.id).get().to_dict()
+        if doc.get("status") in INTERRUPTED:
+            out.append(_interrupted(db, lease, doc))
+        else:
+            coordination.release(db, lease, {})
+    return out
+
+
 def _close_segment(ctx: MissionCtx, seg: dict, sent: list[dict], event_ref) -> dict:
     db, mid = ctx.db, ctx.mission["mission_id"]
     statuses = {a["action_id"]: a["status"] for a in sent}
@@ -219,11 +280,14 @@ def _close_segment(ctx: MissionCtx, seg: dict, sent: list[dict], event_ref) -> d
     else:
         mine = [d.to_dict() for d in db.collection(actions.ACTIONS)
                 .where(filter=firestore.FieldFilter("mission_id", "==", mid)).stream()]
-        blocked = [a for a in mine if a["status"] in ("REJECTED", "NEEDS_REVIEW")]
-        # A segment that ends without any sent action, or on a model error,
-        # is not a finished mission: a human looks at it.
-        done = bool(mine) and all(a["status"] == "SENT" for a in mine) and not seg.get("model_error")
-        new_status = "DONE" if done and not blocked else "NEEDS_REVIEW"
+        latest = {}
+        for a in sorted(mine, key=lambda a: (a.get("turn", 0), a.get("revision", 1))):
+            latest[(a["purpose"], a.get("turn", 0))] = a
+        # A segment that ends without any sent action, with an unresolved
+        # proposal, or on a model error, is not a finished mission.
+        done = bool(latest) and all(a["status"] == "SENT" for a in latest.values()) \
+            and not seg.get("model_error")
+        new_status = "DONE" if done else "NEEDS_REVIEW"
     update = {"status": new_status, "last_segment_text": seg["final_text"],
               "invocation_id": seg["invocation_id"]}
     if seg["paused"]:
@@ -240,7 +304,7 @@ def _close_segment(ctx: MissionCtx, seg: dict, sent: list[dict], event_ref) -> d
                         "updated_at": wall_now()})
 
     coordination.fenced(db, ctx.lease, _w)
-    if new_status in ("DONE",):
+    if new_status == "DONE":
         coordination.release_contact(db, ctx.mission["contact_id"], mid, reason="mission closed")
     trace.record(db, mid, f"mission.{new_status.lower()}", dispatched=statuses,
                  generation=ctx.lease.generation, final_text=seg["final_text"])

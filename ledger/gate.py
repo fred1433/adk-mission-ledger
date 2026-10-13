@@ -75,7 +75,12 @@ def _live_review(action: dict, mission: dict) -> dict:
         raw = json.loads(resp.text)
     except (TypeError, ValueError):
         raw = None
-    return _normalise(raw, mode=f"live:{s.live_model}")
+    out = _normalise(raw, mode=f"live:{s.live_model}")
+    u = resp.usage_metadata
+    if u:
+        out["usage"] = {"prompt": u.prompt_token_count, "cached": u.cached_content_token_count,
+                        "output": u.candidates_token_count, "thoughts": u.thoughts_token_count}
+    return out
 
 
 def _normalise(raw, mode: str) -> dict:
