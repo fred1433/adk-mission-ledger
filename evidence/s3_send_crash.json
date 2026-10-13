@@ -2,8 +2,8 @@
   "scenario": "s3_send_crash",
   "title": "Provider accepts, worker crashes before recording the receipt",
   "where": "two local OS processes -> Firestore (Google Cloud); test adapters",
-  "started_at": "2026-10-13T14:10:04+00:00",
-  "code_commit": "2e406f9ab6b4",
+  "started_at": "2026-10-13T14:26:32+00:00",
+  "code_commit": "a3b5c67f10d4",
   "packages": {
     "google-adk": "2.11.0",
     "google-cloud-aiplatform": "1.165.1",
@@ -18,14 +18,14 @@
   "region": "us-central1",
   "steps": [
     {
-      "at": "2026-10-13T14:10:24.753+00:00",
+      "at": "2026-10-13T14:26:54.013+00:00",
       "what": "[idempotent] process 1 killed after provider acceptance",
       "exit_code": 137,
       "action_status": "DISPATCHING",
       "provider_messages": 1
     },
     {
-      "at": "2026-10-13T14:10:41.800+00:00",
+      "at": "2026-10-13T14:27:09.586+00:00",
       "what": "[idempotent] process 2 ran the dispatcher",
       "exit_code": 0,
       "stdout": [
@@ -35,20 +35,20 @@
       "attempts": 2,
       "provider_messages": 1,
       "receipt": {
-        "accepted_at": "2026-10-13T14:10:22.095179+00:00",
-        "provider_message_id": "sbx-9f7b498ded83",
-        "replayed": true
+        "replayed": true,
+        "provider_message_id": "sbx-9018f3ec17c4",
+        "accepted_at": "2026-10-13T14:26:51.398143+00:00"
       }
     },
     {
-      "at": "2026-10-13T14:10:56.021+00:00",
+      "at": "2026-10-13T14:27:22.481+00:00",
       "what": "[plain] process 1 killed after provider acceptance",
       "exit_code": 137,
       "action_status": "DISPATCHING",
       "provider_messages": 1
     },
     {
-      "at": "2026-10-13T14:11:09.794+00:00",
+      "at": "2026-10-13T14:27:36.208+00:00",
       "what": "[plain] process 2 ran the dispatcher",
       "exit_code": 0,
       "stdout": [
@@ -80,9 +80,9 @@
       "assertion": "[idempotent] retry reused the original provider message",
       "passed": true,
       "observed": {
-        "accepted_at": "2026-10-13T14:10:22.095179+00:00",
-        "provider_message_id": "sbx-9f7b498ded83",
-        "replayed": true
+        "replayed": true,
+        "provider_message_id": "sbx-9018f3ec17c4",
+        "accepted_at": "2026-10-13T14:26:51.398143+00:00"
       }
     },
     {
@@ -101,6 +101,6 @@
       "observed": "NEEDS_RECONCILIATION"
     }
   ],
-  "ended_at": "2026-10-13T14:11:09+00:00",
+  "ended_at": "2026-10-13T14:27:36+00:00",
   "passed": true
 }

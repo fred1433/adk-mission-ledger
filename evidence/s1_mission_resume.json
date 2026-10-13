@@ -2,8 +2,8 @@
   "scenario": "s1_mission_resume",
   "title": "One mission across a worker restart",
   "where": "Cloud Run worker + Cloud Tasks + Firestore + BigQuery + Agent Platform Sessions",
-  "started_at": "2026-10-13T14:07:54+00:00",
-  "code_commit": "2e406f9ab6b4",
+  "started_at": "2026-10-13T14:24:35+00:00",
+  "code_commit": "a3b5c67f10d4",
   "packages": {
     "google-adk": "2.11.0",
     "google-cloud-aiplatform": "1.165.1",
@@ -18,95 +18,95 @@
   "region": "us-central1",
   "steps": [
     {
-      "at": "2026-10-13T14:07:57.927+00:00",
+      "at": "2026-10-13T14:24:38.095+00:00",
       "what": "mission rows written to BigQuery",
       "missions": [
-        "m-10131407-1393-a",
-        "m-10131407-1393-b"
+        "m-10131424-3b12-a",
+        "m-10131424-3b12-b"
       ],
       "table": "mission-ledger-1013-13546.mission_ledger.missions"
     },
     {
-      "at": "2026-10-13T14:07:59.104+00:00",
+      "at": "2026-10-13T14:24:38.650+00:00",
       "what": "start task enqueued",
-      "task": "start-m-10131407-1393-a"
+      "task": "start-m-10131424-3b12-a"
     },
     {
-      "at": "2026-10-13T14:08:19.943+00:00",
+      "at": "2026-10-13T14:25:02.775+00:00",
       "what": "process A parked the mission",
       "parked_by": {
+        "instance": "0010dd860776ef9f086f3be3",
         "service": "ledger-worker",
+        "revision": "ledger-worker-00020-nhm",
         "where": "cloud-run",
-        "instance": "0010dd860794d3915e9bdbec",
-        "pid": 1,
-        "revision": "ledger-worker-00014-zfv"
+        "pid": 1
       },
       "generation": 1,
-      "session_id": "7771608941175242752",
-      "invocation_id": "e-e98d113b-9863-44a9-b40e-282825503296",
-      "pending_call_id": "adk-e40b1e0f-ca54-45df-9f58-603c67ef1972",
+      "session_id": "6925776636159721472",
+      "invocation_id": "e-b5b793d0-ffdd-480a-b1bc-befa056e17ba",
+      "pending_call_id": "adk-9189ad25-d872-4f30-accc-b672c753bd24",
       "manifest": {
-        "adk_version": "2.11.0",
-        "skills": {
-          "reply-triage": "b700548bce5cd8ef",
-          "follow-up-writer": "4dec65ba2e55c488"
-        },
         "model": {
           "model": "fixture:consultation_follow_up.json@e6bf6e55a2de",
           "mode": "fixture"
         },
-        "skills_sha": "e9ea936bf463e039",
         "persona": {
           "name": "account-coordinator",
           "sha": "566dc8bfd6b12053"
         },
-        "policy_version": "outbound-policy-v1",
         "session": {
           "agent_engine_id": "3521753610830479360",
-          "ttl_seconds": 432000,
-          "id": "7771608941175242752"
+          "id": "6925776636159721472",
+          "ttl_seconds": 432000
         },
-        "code_revision": "2e406f9ab6b4"
+        "policy_version": "outbound-policy-v1",
+        "skills_sha": "e9ea936bf463e039",
+        "code_revision": "a3b5c67f10d4",
+        "skills": {
+          "reply-triage": "b700548bce5cd8ef",
+          "follow-up-writer": "4dec65ba2e55c488"
+        },
+        "adk_version": "2.11.0"
       }
     },
     {
-      "at": "2026-10-13T14:08:56.042+00:00",
+      "at": "2026-10-13T14:25:33.350+00:00",
       "what": "new Cloud Run revision rolled out; process A's revision retired",
-      "old_revision": "ledger-worker-00014-zfv",
-      "new_revision": "ledger-worker-00015-p58"
+      "old_revision": "ledger-worker-00020-nhm",
+      "new_revision": "ledger-worker-00021-9c9"
     },
     {
-      "at": "2026-10-13T14:09:24.142+00:00",
+      "at": "2026-10-13T14:26:02.680+00:00",
       "what": "reply delivered to the webhook twice (48 h wait simulated by timestamp)",
       "first": {
         "status": "recorded",
-        "mission_id": "m-10131407-1393-a",
+        "mission_id": "m-10131424-3b12-a",
         "wake": "enqueued"
       },
       "second": {
         "status": "duplicate",
-        "mission_id": "m-10131407-1393-a"
+        "mission_id": "m-10131424-3b12-a"
       },
-      "simulated_received_at": "2026-10-15T14:08:17.754111+00:00"
+      "simulated_received_at": "2026-10-15T14:25:01.252847+00:00"
     },
     {
-      "at": "2026-10-13T14:09:45.798+00:00",
+      "at": "2026-10-13T14:26:17.642+00:00",
       "what": "Agent Platform Sessions record",
-      "name": "projects/mission-ledger-1013-13546/locations/us-central1/reasoningEngines/3521753610830479360/sessions/7771608941175242752",
-      "expire_time": "2026-10-18 14:08:13.690561+00:00",
+      "name": "projects/mission-ledger-1013-13546/locations/us-central1/reasoningEngines/3521753610830479360/sessions/6925776636159721472",
+      "expire_time": "2026-10-18 14:24:57.355371+00:00",
       "event_count": 17
     },
     {
-      "at": "2026-10-13T14:09:46.024+00:00",
+      "at": "2026-10-13T14:26:17.885+00:00",
       "what": "memory candidates left in quarantine by this mission",
       "candidates": [
         {
-          "candidate_id": "mem-37c6f5e3fa",
+          "candidate_id": "mem-cc84adb1a7",
           "topic": "discount_for_hesitation",
           "status": "QUARANTINED"
         },
         {
-          "candidate_id": "mem-d05c0e38ec",
+          "candidate_id": "mem-f65394c3a4",
           "topic": "preferred_time_of_day",
           "status": "QUARANTINED"
         }
@@ -131,7 +131,7 @@
       "passed": true,
       "observed": {
         "status": "BLOCKED_CONTACT_RESERVED",
-        "blocked_by": "m-10131407-1393-a"
+        "blocked_by": "m-10131424-3b12-a"
       }
     },
     {
@@ -139,7 +139,7 @@
       "passed": true,
       "observed": {
         "status": "duplicate",
-        "mission_id": "m-10131407-1393-a"
+        "mission_id": "m-10131424-3b12-a"
       }
     },
     {
@@ -172,18 +172,18 @@
       "passed": true,
       "observed": {
         "parked_by": {
+          "instance": "0010dd860776ef9f086f3be3",
           "service": "ledger-worker",
+          "revision": "ledger-worker-00020-nhm",
           "where": "cloud-run",
-          "instance": "0010dd860794d3915e9bdbec",
-          "pid": 1,
-          "revision": "ledger-worker-00014-zfv"
+          "pid": 1
         },
         "resumed_by": {
-          "where": "cloud-run",
-          "service": "ledger-worker",
-          "instance": "0010dd860756bac3f84e6761",
           "pid": 1,
-          "revision": "ledger-worker-00015-p58"
+          "service": "ledger-worker",
+          "revision": "ledger-worker-00021-9c9",
+          "where": "cloud-run",
+          "instance": "0010dd8607eeae311ab1650b"
         }
       }
     },
@@ -198,8 +198,8 @@
       "observed": "RELEASED"
     }
   ],
-  "mission_id": "m-10131407-1393-a",
-  "competing_mission_id": "m-10131407-1393-b",
+  "mission_id": "m-10131424-3b12-a",
+  "competing_mission_id": "m-10131424-3b12-b",
   "agent_calls": [
     "load_skill",
     "propose_action",
@@ -211,252 +211,252 @@
   ],
   "provider_messages": [
     {
-      "body": "Hi Jordan, thanks for asking about a consultation. I can offer Tuesday at 10:00 or Thursday at 15:00. Which one suits you?",
-      "mission_id": "m-10131407-1393-a",
-      "to": "jordan.10131407-1393@example.com",
+      "to": "jordan.10131424-3b12@example.com",
       "adapter": "sandbox-mailbox-idempotent",
-      "accepted_at": "2026-10-13T14:08:17.534433+00:00",
-      "idempotency_key": "m-10131407-1393-a.first_contact",
-      "thread_token": "thr-4ff6816e87704258"
+      "mission_id": "m-10131424-3b12-a",
+      "thread_token": "thr-4cba4a4ff8294e25",
+      "body": "Hi Jordan, thanks for asking about a consultation. I can offer Tuesday at 10:00 or Thursday at 15:00. Which one suits you?",
+      "idempotency_key": "m-10131424-3b12-a.first_contact",
+      "accepted_at": "2026-10-13T14:25:01.030748+00:00"
     },
     {
+      "to": "jordan.10131424-3b12@example.com",
+      "thread_token": "thr-4cba4a4ff8294e25",
+      "mission_id": "m-10131424-3b12-a",
       "body": "Thank you, Jordan. Thursday at 15:00 is confirmed for your consultation. A coordinator will send the calendar invitation.",
-      "mission_id": "m-10131407-1393-a",
-      "to": "jordan.10131407-1393@example.com",
-      "idempotency_key": "m-10131407-1393-a.confirm_after_reply",
-      "accepted_at": "2026-10-13T14:09:28.436182+00:00",
       "adapter": "sandbox-mailbox-idempotent",
-      "thread_token": "thr-4ff6816e87704258"
+      "idempotency_key": "m-10131424-3b12-a.confirm_after_reply",
+      "accepted_at": "2026-10-13T14:26:08.194911+00:00"
     }
   ],
   "trace": [
     {
-      "at": "14:08:01.722",
+      "at": "14:24:46.663",
       "kind": "lease.acquired",
-      "where": "ledger-worker-00014-zfv/9bdbec",
+      "where": "ledger-worker-00020-nhm/6f3be3",
       "generation": 1
     },
     {
-      "at": "14:08:02.095",
+      "at": "14:24:47.347",
       "kind": "reservation.held",
-      "where": "ledger-worker-00014-zfv/9bdbec"
+      "where": "ledger-worker-00020-nhm/6f3be3"
     },
     {
-      "at": "14:08:14.124",
+      "at": "14:24:57.703",
       "kind": "manifest.pinned",
-      "where": "ledger-worker-00014-zfv/9bdbec"
+      "where": "ledger-worker-00020-nhm/6f3be3"
     },
     {
-      "at": "14:08:14.210",
+      "at": "14:24:57.788",
       "kind": "agent.equipped",
-      "where": "ledger-worker-00014-zfv/9bdbec"
+      "where": "ledger-worker-00020-nhm/6f3be3"
     },
     {
-      "at": "14:08:15.886",
+      "at": "14:24:59.198",
       "kind": "agent.call",
-      "where": "ledger-worker-00014-zfv/9bdbec",
+      "where": "ledger-worker-00020-nhm/6f3be3",
       "name": "load_skill"
     },
     {
-      "at": "14:08:16.308",
+      "at": "14:24:59.590",
       "kind": "agent.call",
-      "where": "ledger-worker-00014-zfv/9bdbec",
+      "where": "ledger-worker-00020-nhm/6f3be3",
       "name": "propose_action"
     },
     {
-      "at": "14:08:16.520",
+      "at": "14:24:59.896",
       "kind": "action.proposed",
-      "where": "ledger-worker-00014-zfv/9bdbec",
-      "action_id": "m-10131407-1393-a.first_contact",
+      "where": "ledger-worker-00020-nhm/6f3be3",
+      "action_id": "m-10131424-3b12-a.first_contact",
       "generation": 1
     },
     {
-      "at": "14:08:16.756",
+      "at": "14:25:00.148",
       "kind": "gate.verdict",
-      "where": "ledger-worker-00014-zfv/9bdbec",
-      "action_id": "m-10131407-1393-a.first_contact",
+      "where": "ledger-worker-00020-nhm/6f3be3",
+      "action_id": "m-10131424-3b12-a.first_contact",
       "decision": "APPROVE",
       "reasons": [
         "both options come from the mission facts"
       ]
     },
     {
-      "at": "14:08:17.125",
+      "at": "14:25:00.508",
       "kind": "agent.call",
-      "where": "ledger-worker-00014-zfv/9bdbec",
+      "where": "ledger-worker-00020-nhm/6f3be3",
       "name": "wait_for_reply"
     },
     {
-      "at": "14:08:17.164",
+      "at": "14:25:00.565",
       "kind": "agent.waiting",
-      "where": "ledger-worker-00014-zfv/9bdbec",
-      "action_id": "m-10131407-1393-a.first_contact"
+      "where": "ledger-worker-00020-nhm/6f3be3",
+      "action_id": "m-10131424-3b12-a.first_contact"
     },
     {
-      "at": "14:08:17.195",
+      "at": "14:25:00.610",
       "kind": "agent.discarded",
-      "where": "ledger-worker-00014-zfv/9bdbec"
+      "where": "ledger-worker-00020-nhm/6f3be3"
     },
     {
-      "at": "14:08:17.439",
+      "at": "14:25:00.894",
       "kind": "dispatch.claim",
-      "where": "ledger-worker-00014-zfv/9bdbec",
-      "action_id": "m-10131407-1393-a.first_contact",
+      "where": "ledger-worker-00020-nhm/6f3be3",
+      "action_id": "m-10131424-3b12-a.first_contact",
       "mode": "first-attempt",
       "generation": 1
     },
     {
-      "at": "14:08:17.573",
+      "at": "14:25:01.074",
       "kind": "provider.accepted",
-      "where": "ledger-worker-00014-zfv/9bdbec",
-      "action_id": "m-10131407-1393-a.first_contact",
-      "provider_message_id": "sbx-0b5473ad54e2"
+      "where": "ledger-worker-00020-nhm/6f3be3",
+      "action_id": "m-10131424-3b12-a.first_contact",
+      "provider_message_id": "sbx-47a159c7536f"
     },
     {
-      "at": "14:08:17.685",
+      "at": "14:25:01.208",
       "kind": "dispatch.sent",
-      "where": "ledger-worker-00014-zfv/9bdbec",
-      "action_id": "m-10131407-1393-a.first_contact",
+      "where": "ledger-worker-00020-nhm/6f3be3",
+      "action_id": "m-10131424-3b12-a.first_contact",
       "mode": "first-attempt",
-      "provider_message_id": "sbx-0b5473ad54e2"
+      "provider_message_id": "sbx-47a159c7536f"
     },
     {
-      "at": "14:08:17.850",
+      "at": "14:25:01.353",
       "kind": "mission.waiting_reply",
-      "where": "ledger-worker-00014-zfv/9bdbec",
+      "where": "ledger-worker-00020-nhm/6f3be3",
       "generation": 1
     },
     {
-      "at": "14:09:06.850",
+      "at": "14:25:34.360",
       "kind": "inbound.recorded",
-      "where": "ledger-worker-00015-p58/843f15",
-      "provider_message_id": "sbx-reply-10131407-1393"
+      "where": "ledger-worker-00021-9c9/b1650b",
+      "provider_message_id": "sbx-reply-10131424-3b12"
     },
     {
-      "at": "14:09:07.158",
+      "at": "14:25:34.663",
       "kind": "wake.enqueued",
-      "where": "ledger-worker-00015-p58/843f15"
+      "where": "ledger-worker-00021-9c9/b1650b"
     },
     {
-      "at": "14:09:09.752",
+      "at": "14:25:35.917",
       "kind": "lease.acquired",
-      "where": "ledger-worker-00015-p58/4e6761",
+      "where": "ledger-worker-00021-9c9/b1650b",
       "generation": 2
     },
     {
-      "at": "14:09:09.874",
+      "at": "14:25:36.072",
       "kind": "manifest.verified",
-      "where": "ledger-worker-00015-p58/4e6761"
+      "where": "ledger-worker-00021-9c9/b1650b"
     },
     {
-      "at": "14:09:10.112",
+      "at": "14:25:36.227",
       "kind": "resume.start",
-      "where": "ledger-worker-00015-p58/4e6761"
+      "where": "ledger-worker-00021-9c9/b1650b"
     },
     {
-      "at": "14:09:22.292",
+      "at": "14:25:59.678",
       "kind": "agent.equipped",
-      "where": "ledger-worker-00015-p58/4e6761"
+      "where": "ledger-worker-00021-9c9/b1650b"
     },
     {
-      "at": "14:09:23.994",
+      "at": "14:26:02.542",
       "kind": "inbound.duplicate",
-      "where": "ledger-worker-00015-p58/4e6761",
-      "provider_message_id": "sbx-reply-10131407-1393"
+      "where": "ledger-worker-00021-9c9/b1650b",
+      "provider_message_id": "sbx-reply-10131424-3b12"
     },
     {
-      "at": "14:09:25.719",
+      "at": "14:26:05.495",
       "kind": "agent.call",
-      "where": "ledger-worker-00015-p58/4e6761",
+      "where": "ledger-worker-00021-9c9/b1650b",
       "name": "load_skill"
     },
     {
-      "at": "14:09:26.114",
+      "at": "14:26:05.904",
       "kind": "agent.call",
-      "where": "ledger-worker-00015-p58/4e6761",
+      "where": "ledger-worker-00021-9c9/b1650b",
       "name": "propose_memory"
     },
     {
-      "at": "14:09:26.194",
+      "at": "14:26:05.992",
       "kind": "memory.quarantined",
-      "where": "ledger-worker-00015-p58/4e6761"
+      "where": "ledger-worker-00021-9c9/b1650b"
     },
     {
-      "at": "14:09:26.558",
+      "at": "14:26:06.382",
       "kind": "agent.call",
-      "where": "ledger-worker-00015-p58/4e6761",
+      "where": "ledger-worker-00021-9c9/b1650b",
       "name": "propose_memory"
     },
     {
-      "at": "14:09:26.622",
+      "at": "14:26:06.457",
       "kind": "memory.quarantined",
-      "where": "ledger-worker-00015-p58/4e6761"
+      "where": "ledger-worker-00021-9c9/b1650b"
     },
     {
-      "at": "14:09:26.969",
+      "at": "14:26:06.774",
       "kind": "agent.call",
-      "where": "ledger-worker-00015-p58/4e6761",
+      "where": "ledger-worker-00021-9c9/b1650b",
       "name": "propose_action"
     },
     {
-      "at": "14:09:27.159",
+      "at": "14:26:06.984",
       "kind": "action.proposed",
-      "where": "ledger-worker-00015-p58/4e6761",
-      "action_id": "m-10131407-1393-a.confirm_after_reply",
+      "where": "ledger-worker-00021-9c9/b1650b",
+      "action_id": "m-10131424-3b12-a.confirm_after_reply",
       "generation": 2
     },
     {
-      "at": "14:09:27.319",
+      "at": "14:26:07.186",
       "kind": "gate.verdict",
-      "where": "ledger-worker-00015-p58/4e6761",
-      "action_id": "m-10131407-1393-a.confirm_after_reply",
+      "where": "ledger-worker-00021-9c9/b1650b",
+      "action_id": "m-10131424-3b12-a.confirm_after_reply",
       "decision": "APPROVE",
       "reasons": [
         "confirms the option the contact chose"
       ]
     },
     {
-      "at": "14:09:28.171",
+      "at": "14:26:07.887",
       "kind": "agent.discarded",
-      "where": "ledger-worker-00015-p58/4e6761"
+      "where": "ledger-worker-00021-9c9/b1650b"
     },
     {
-      "at": "14:09:28.365",
+      "at": "14:26:08.130",
       "kind": "dispatch.claim",
-      "where": "ledger-worker-00015-p58/4e6761",
-      "action_id": "m-10131407-1393-a.confirm_after_reply",
+      "where": "ledger-worker-00021-9c9/b1650b",
+      "action_id": "m-10131424-3b12-a.confirm_after_reply",
       "mode": "first-attempt",
       "generation": 2
     },
     {
-      "at": "14:09:28.475",
+      "at": "14:26:08.219",
       "kind": "provider.accepted",
-      "where": "ledger-worker-00015-p58/4e6761",
-      "action_id": "m-10131407-1393-a.confirm_after_reply",
-      "provider_message_id": "sbx-d8383e261610"
+      "where": "ledger-worker-00021-9c9/b1650b",
+      "action_id": "m-10131424-3b12-a.confirm_after_reply",
+      "provider_message_id": "sbx-58ee8c7c8fd9"
     },
     {
-      "at": "14:09:28.590",
+      "at": "14:26:08.320",
       "kind": "dispatch.sent",
-      "where": "ledger-worker-00015-p58/4e6761",
-      "action_id": "m-10131407-1393-a.confirm_after_reply",
+      "where": "ledger-worker-00021-9c9/b1650b",
+      "action_id": "m-10131424-3b12-a.confirm_after_reply",
       "mode": "first-attempt",
-      "provider_message_id": "sbx-d8383e261610"
+      "provider_message_id": "sbx-58ee8c7c8fd9"
     },
     {
-      "at": "14:09:28.793",
+      "at": "14:26:08.521",
       "kind": "mission.done",
-      "where": "ledger-worker-00015-p58/4e6761",
+      "where": "ledger-worker-00021-9c9/b1650b",
       "generation": 2
     },
     {
-      "at": "14:09:33.156",
+      "at": "14:26:10.894",
       "kind": "resume.noop",
-      "where": "ledger-worker-00015-p58/4e6761",
+      "where": "ledger-worker-00021-9c9/b1650b",
       "generation": 3
     }
   ],
   "final_text": "Consultation confirmed for Thursday 15:00. Mission complete.",
-  "ended_at": "2026-10-13T14:09:46+00:00",
+  "ended_at": "2026-10-13T14:26:17+00:00",
   "passed": true
 }

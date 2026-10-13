@@ -2,8 +2,8 @@
   "scenario": "s5_memory",
   "title": "Quarantine, validation, create-only publication",
   "where": "local validator -> Firestore; publisher -> FakeMemoryBank (in process); worker identity checks on Cloud Run",
-  "started_at": "2026-10-13T14:13:03+00:00",
-  "code_commit": "2e406f9ab6b4",
+  "started_at": "2026-10-13T14:29:22+00:00",
+  "code_commit": "a3b5c67f10d4",
   "packages": {
     "google-adk": "2.11.0",
     "google-cloud-aiplatform": "1.165.1",
@@ -18,12 +18,12 @@
   "region": "us-central1",
   "steps": [
     {
-      "at": "2026-10-13T14:13:04.778+00:00",
+      "at": "2026-10-13T14:29:23.817+00:00",
       "what": "quarantined candidates from the mission",
-      "mission_id": "m-10131407-1393-a",
+      "mission_id": "m-10131424-3b12-a",
       "candidates": [
         {
-          "candidate_id": "mem-37c6f5e3fa",
+          "candidate_id": "mem-cc84adb1a7",
           "topic": "discount_for_hesitation",
           "scope": {
             "playbook": "follow-up-writer"
@@ -32,10 +32,10 @@
           "status": "QUARANTINED"
         },
         {
-          "candidate_id": "mem-d05c0e38ec",
+          "candidate_id": "mem-f65394c3a4",
           "topic": "preferred_time_of_day",
           "scope": {
-            "contact_id": "c-10131407-1393-jordan"
+            "contact_id": "c-10131424-3b12-jordan"
           },
           "fact": "Prefers afternoon appointments.",
           "status": "QUARANTINED"
@@ -43,7 +43,7 @@
       ]
     },
     {
-      "at": "2026-10-13T14:13:05.898+00:00",
+      "at": "2026-10-13T14:29:24.908+00:00",
       "what": "validated discount_for_hesitation",
       "status": "REJECTED",
       "stage": "rules",
@@ -53,7 +53,7 @@
       "reviewer_mode": null
     },
     {
-      "at": "2026-10-13T14:13:07.029+00:00",
+      "at": "2026-10-13T14:29:26.022+00:00",
       "what": "validated preferred_time_of_day",
       "status": "APPROVED",
       "stage": "reviewer",
@@ -63,18 +63,18 @@
       "reviewer_mode": "fixture:memory.json"
     },
     {
-      "at": "2026-10-13T14:13:08.114+00:00",
+      "at": "2026-10-13T14:29:27.115+00:00",
       "what": "approved fact published with memories.create",
       "memory_name": "projects/mission-ledger-1013-13546/locations/us-central1/reasoningEngines/3521753610830479360/memories/1"
     },
     {
-      "at": "2026-10-13T14:13:08.921+00:00",
+      "at": "2026-10-13T14:29:28.017+00:00",
       "what": "worker identity permissions (testIamPermissions from inside Cloud Run)",
       "process": {
         "pid": 1,
-        "revision": "ledger-worker-00015-p58",
+        "revision": "ledger-worker-00021-9c9",
         "service": "ledger-worker",
-        "instance": "0010dd860756bac3f84e6761",
+        "instance": "0010dd8607eeae311ab1650b",
         "where": "cloud-run"
       },
       "service_account": "ledger-worker@mission-ledger-1013-13546.iam.gserviceaccount.com",
@@ -110,7 +110,7 @@
     {
       "assertion": "publisher refuses a rejected candidate",
       "passed": true,
-      "observed": "mem-37c6f5e3fa is REJECTED, not APPROVED"
+      "observed": "mem-cc84adb1a7 is REJECTED, not APPROVED"
     },
     {
       "assertion": "approved fact stored unchanged (fake bank)",
@@ -148,6 +148,6 @@
       "observed": []
     }
   ],
-  "ended_at": "2026-10-13T14:13:08+00:00",
+  "ended_at": "2026-10-13T14:29:28+00:00",
   "passed": true
 }
