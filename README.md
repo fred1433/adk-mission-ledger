@@ -69,7 +69,7 @@ All on 2026-10-13 against the throwaway project `mission-ledger-1013-13546` (us-
 | 4 | Over-promise with a "skip review" note: reviewer REJECT enforced; direct dispatch refused; text changed after approval blocked; price figure rejected before the reviewer | local process -> Firestore, BigQuery, Sessions | fixture | 10/10 pass | `s4_gate.json` |
 | 5 | Quarantine, validation, create-only publication; worker identity lacks memory write and cannot impersonate the publisher | local + Cloud Run identity check; FakeMemoryBank | fixture | 8/8 pass | `s5_memory.json` |
 | 5 live | Same, against Agent Platform Memory Bank: approved fact read back unchanged, retrieved by similarity search, rejected text absent from the full listing; worker reads, and its `memories.create` gets **403 PERMISSION_DENIED** from the platform | publisher impersonated locally; probe inside Cloud Run | live embeddings (`gemini-embedding-001`) | 10/10 pass | `s5_memory_live.json` |
-| 1 live | Scenario 1 with Gemini 3.8 Flash as agent and reviewer | Cloud Run | **live** | 8/11; see below | `s1_mission_resume_live.json` |
+| 1 live | Scenario 1 with Gemini 3.8 Flash as agent and reviewer | Cloud Run | **live** | attempt 3: 8/11; attempt 4 (final code): failed, first model call refused (403); see below | `live_attempts/attempt3_reviewer_without_reply.json`, `s1_mission_resume_live.json` |
 | 6 | Insert-only MERGE race vs Firestore transaction | local process -> BigQuery, Firestore | none | observed 2 rows vs 1 winner | `s6_bigquery_merge_race.json` |
 
 Offline: `pytest tests` (16 tests, no network).
@@ -78,7 +78,7 @@ Offline: `pytest tests` (16 tests, no network).
 
 Bounded run: at most 12 model calls per process, output capped, temperature 0, one mission per attempt.
 Gemini 3.8 Flash on the Global endpoint for the agent and the reviewer. Measured from the session usage
-metadata: 16 agent calls, 27,085 input and 4,095 output tokens (thinking included) over three attempts,
+metadata: 16 agent calls, 27,085 input and 4,095 output tokens (thinking included) over four attempts,
 about **$0.04 at list price** with the two reviewer calls and the embeddings; estimated from recorded
 usage, before the invoice.
 
@@ -88,15 +88,23 @@ usage, before the invoice.
 2. The agent proposed the first message correctly; the live reviewer then failed because the image did not
    contain `policies/`. The segment crashed, Cloud Tasks retried, and the retry correctly did nothing. Fixed:
    the image copies `policies/`; a test checks it; an interrupted segment now goes to review.
-3. ([`evidence/s1_mission_resume_live.json`](evidence/s1_mission_resume_live.json)) Gemini wrote the first
+3. ([`evidence/live_attempts/attempt3_reviewer_without_reply.json`](evidence/live_attempts/attempt3_reviewer_without_reply.json)) Gemini wrote the first
    message itself, the live reviewer approved it, it was sent once, the mission parked, the competing
    mission was refused, the duplicate reply was ignored, and a different revision resumed the invocation.
    Gemini then proposed "Thursday at 15:00 is confirmed", and the live reviewer **rejected** it: it had been
    given the mission facts but not the contact's reply, so the confirmation looked unsupported. The agent
    proposed again under the same purpose, hit the same action id (no duplicate), and handed over. Mission
    NEEDS_REVIEW, contact still reserved, one message sent. Safe, but wrong for the business. Fixed after the
-   run: on resume, the reviewer now also receives the verified inbound reply. That fix is covered by the
-   fixture runs only; it has not been re-run live.
+   run: on resume, the reviewer now also receives the verified inbound reply.
+4. ([`evidence/s1_mission_resume_live.json`](evidence/s1_mission_resume_live.json), image rebuilt from
+   `bf1352e`, one attempt, no retry) The first Gemini call was refused with 403 on
+   `aiplatform.endpoints.predict`: the model-caller role had been granted seconds before the run and had not
+   propagated yet. No tokens were spent. So the reviewer fix above is still verified only by the fixture
+   runs. The failure exposed a second gap: the segment raised, Cloud Tasks retried while the 120-second lease
+   was still held (409 each time), and all 5 attempts were spent before the lease expired, leaving the mission
+   RUNNING with nothing left to wake it. A periodic sweep that sends expired RUNNING missions to review is
+   needed and not yet built; this mission, and the one from attempt 2, were sent to review by calling the
+   start handler once by hand (`segment.interrupted` in their traces).
 
 ## Topology (as tested)
 

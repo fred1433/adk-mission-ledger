@@ -10,7 +10,8 @@ No. This repository is not an ADK agent in client production. It is a reference 
 Google Cloud with synthetic data, with its tested boundaries and limits written down. What broke while it
 was being built is recorded in the README: a lock that BigQuery cannot provide, a live agent that ran out
 of output budget and was wrongly marked done, an image missing a folder, and a live reviewer that rejected
-a correct confirmation because it never saw the contact's reply.
+a correct confirmation because it never saw the contact's reply, and a crashed segment whose task
+retries ran out before its lease expired.
 
 ## What a 15-minute screen walkthrough would cover
 
@@ -76,7 +77,9 @@ lease, gate and dispatcher in this repository do not depend on ADK and would sit
    often NEEDS_REVIEW is acceptable to the team.
 4. The alias directory: which system is authoritative for contacts.
 5. Cloud Run worker with managed Sessions (tested) versus deploying the worker to Agent Runtime (not tested).
-6. ADK upgrade policy: `ResumabilityConfig` and Skills are experimental in 2.11; pinned versions plus
+6. A sweep for missions left RUNNING after their lease expired (task retries can end first; seen in live
+   attempt 4). Not built yet.
+7. ADK upgrade policy: `ResumabilityConfig` and Skills are experimental in 2.11; pinned versions plus
    manifest checks contain the risk but do not remove it.
 
 ## Three risks

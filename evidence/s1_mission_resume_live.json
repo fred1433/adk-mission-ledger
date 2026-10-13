@@ -1,0 +1,46 @@
+{
+  "scenario": "s1_mission_resume_live",
+  "title": "One mission across a worker restart (live Gemini)",
+  "where": "Cloud Run worker + Cloud Tasks + Firestore + BigQuery + Agent Platform Sessions",
+  "started_at": "2026-10-13T14:36:43+00:00",
+  "code_commit": "bf1352e7cc2a",
+  "packages": {
+    "google-adk": "2.11.0",
+    "google-cloud-aiplatform": "1.165.1",
+    "google-cloud-firestore": "2.34.1",
+    "google-cloud-bigquery": "3.46.1",
+    "google-cloud-tasks": "2.26.0",
+    "google-genai": "2.30.0"
+  },
+  "model_mode": "live (worker env)",
+  "paid_model_calls": false,
+  "project": "mission-ledger-1013-13546",
+  "region": "us-central1",
+  "steps": [
+    {
+      "at": "2026-10-13T14:36:46.131+00:00",
+      "what": "mission rows written to BigQuery",
+      "missions": [
+        "m-10131436-40e7-a",
+        "m-10131436-40e7-b"
+      ],
+      "table": "mission-ledger-1013-13546.mission_ledger.missions"
+    },
+    {
+      "at": "2026-10-13T14:36:47.349+00:00",
+      "what": "start task enqueued",
+      "task": "start-m-10131436-40e7-a"
+    }
+  ],
+  "assertions": [
+    {
+      "assertion": "scenario completed without error",
+      "passed": false,
+      "observed": "TimeoutError(\"m-10131436-40e7-a did not reach {'DONE', 'WAITING_REPLY', 'NEEDS_REVIEW'}; last RUNNING\")"
+    }
+  ],
+  "mission_id": "m-10131436-40e7-a",
+  "competing_mission_id": "m-10131436-40e7-b",
+  "ended_at": "2026-10-13T14:40:48+00:00",
+  "passed": false
+}
