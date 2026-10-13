@@ -106,7 +106,8 @@ def main() -> bool:
                  probe.get("write_refused") is True, probe.get("write_error"))
     else:
         ev.check("approved fact stored unchanged", good["fact"] in texts, texts)
-        ev.check("publisher used create and list only", set(api.calls) <= {"create", "list"}, api.calls)
+        ev.check("bank used only create, get (read-back) and list", set(api.calls) <= {"create", "get", "list"},
+                 api.calls)
     ev.check("rejected text absent from the complete listing", bad["fact"] not in texts, {"listed": len(texts)})
 
     # a. a QUARANTINED candidate handed straight to the publisher
