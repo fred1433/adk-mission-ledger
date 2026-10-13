@@ -1,0 +1,226 @@
+{
+  "scenario": "s6_bigquery_merge_race",
+  "title": "Insert-only MERGE as a lock, vs a Firestore transaction",
+  "where": "local process -> BigQuery and Firestore (Google Cloud)",
+  "started_at": "2026-10-13T13:36:24+00:00",
+  "code_commit": "30b836e1b910",
+  "packages": {
+    "google-adk": "2.11.0",
+    "google-cloud-aiplatform": "1.165.1",
+    "google-cloud-firestore": "2.34.1",
+    "google-cloud-bigquery": "3.46.1",
+    "google-cloud-tasks": "2.26.0",
+    "google-genai": "2.30.0"
+  },
+  "model_mode": "fixture",
+  "paid_model_calls": false,
+  "project": "mission-ledger-1013-13546",
+  "region": "us-central1",
+  "steps": [
+    {
+      "at": "2026-10-13T13:37:08.419+00:00",
+      "what": "round 0: 20 concurrent insert-only MERGE on one contact",
+      "rows_for_contact": 3,
+      "statements_reporting_insert": 3,
+      "errors": 0,
+      "all_started_before_first_ended": false
+    },
+    {
+      "at": "2026-10-13T13:37:12.087+00:00",
+      "what": "Firestore: 20 concurrent transactional reservations",
+      "results": [
+        "refused",
+        "refused",
+        "refused",
+        "refused",
+        "refused",
+        "refused",
+        "refused",
+        "refused",
+        "refused",
+        "refused",
+        "refused",
+        "refused",
+        "refused",
+        "refused",
+        "refused",
+        "refused",
+        "refused",
+        "refused",
+        "won",
+        "refused"
+      ]
+    }
+  ],
+  "assertions": [
+    {
+      "assertion": "observed outcome recorded (not asserted in advance)",
+      "passed": true,
+      "observed": "max rows for one contact across 1 round(s): 3"
+    },
+    {
+      "assertion": "Firestore: exactly one winner",
+      "passed": true,
+      "observed": 1
+    }
+  ],
+  "bigquery_rounds": [
+    {
+      "round": 0,
+      "contact": "c-10131336-0b62-r0",
+      "statements": 20,
+      "rows_for_contact": 3,
+      "statements_reporting_insert": 3,
+      "errors": 0,
+      "overlap": false,
+      "first_start": "2026-10-13T13:36:25.711000+00:00",
+      "last_start": "2026-10-13T13:37:04.254000+00:00",
+      "first_end": "2026-10-13T13:36:27.032000+00:00",
+      "jobs": [
+        {
+          "job_id": "c75eafca-97d7-4285-8cc5-fbb5e68613d4",
+          "affected": 0,
+          "started": "2026-10-13T13:36:29.229000+00:00",
+          "ended": "2026-10-13T13:36:30.538000+00:00",
+          "error": null
+        },
+        {
+          "job_id": "7f345eff-72d3-43c9-a5b3-8743c3a9db9f",
+          "affected": 0,
+          "started": "2026-10-13T13:37:02.906000+00:00",
+          "ended": "2026-10-13T13:37:04.251000+00:00",
+          "error": null
+        },
+        {
+          "job_id": "e4e70af0-f495-4a9c-97eb-697849a4de9a",
+          "affected": 0,
+          "started": "2026-10-13T13:37:00.802000+00:00",
+          "ended": "2026-10-13T13:37:02.121000+00:00",
+          "error": null
+        },
+        {
+          "job_id": "02c7a0d1-e2b7-4d8d-a937-545074ea92bc",
+          "affected": 1,
+          "started": "2026-10-13T13:36:26.092000+00:00",
+          "ended": "2026-10-13T13:36:27.322000+00:00",
+          "error": null
+        },
+        {
+          "job_id": "0ff1fac0-9a14-4e3e-af85-c6537f7f94ca",
+          "affected": 0,
+          "started": "2026-10-13T13:37:02.305000+00:00",
+          "ended": "2026-10-13T13:37:03.680000+00:00",
+          "error": null
+        },
+        {
+          "job_id": "bf2b1744-2d9d-416f-90b9-fbdda8dcde46",
+          "affected": 0,
+          "started": "2026-10-13T13:36:59.246000+00:00",
+          "ended": "2026-10-13T13:37:00.606000+00:00",
+          "error": null
+        },
+        {
+          "job_id": "75fa7c50-1212-439e-82cf-c860109830c5",
+          "affected": 0,
+          "started": "2026-10-13T13:36:45.242000+00:00",
+          "ended": "2026-10-13T13:36:47.331000+00:00",
+          "error": null
+        },
+        {
+          "job_id": "5880b420-8180-408c-9499-36ea16e1c975",
+          "affected": 0,
+          "started": "2026-10-13T13:36:42.559000+00:00",
+          "ended": "2026-10-13T13:36:43.790000+00:00",
+          "error": null
+        },
+        {
+          "job_id": "9c25d431-40be-4553-ba6d-c374b984c03c",
+          "affected": 0,
+          "started": "2026-10-13T13:36:56.124000+00:00",
+          "ended": "2026-10-13T13:36:57.489000+00:00",
+          "error": null
+        },
+        {
+          "job_id": "8e181a2a-fa30-42a4-84fd-923a9b919e04",
+          "affected": 0,
+          "started": "2026-10-13T13:36:38.846000+00:00",
+          "ended": "2026-10-13T13:36:40.771000+00:00",
+          "error": null
+        },
+        {
+          "job_id": "09b42c64-3f8f-4588-a1a4-17e4756be865",
+          "affected": 0,
+          "started": "2026-10-13T13:37:04.254000+00:00",
+          "ended": "2026-10-13T13:37:05.741000+00:00",
+          "error": null
+        },
+        {
+          "job_id": "6f165923-1692-47f7-a942-a3066fc9fbf0",
+          "affected": 0,
+          "started": "2026-10-13T13:36:43.952000+00:00",
+          "ended": "2026-10-13T13:36:45.145000+00:00",
+          "error": null
+        },
+        {
+          "job_id": "bce4f70b-9148-45cf-b87a-780f80f002ee",
+          "affected": 0,
+          "started": "2026-10-13T13:36:52.793000+00:00",
+          "ended": "2026-10-13T13:36:54.352000+00:00",
+          "error": null
+        },
+        {
+          "job_id": "d9a1b26a-e77f-4bfc-bcfe-00cd7d28bdd6",
+          "affected": 0,
+          "started": "2026-10-13T13:36:57.701000+00:00",
+          "ended": "2026-10-13T13:36:59.023000+00:00",
+          "error": null
+        },
+        {
+          "job_id": "2e5912e3-dcd4-4b22-93f0-832f811ce20a",
+          "affected": 0,
+          "started": "2026-10-13T13:36:45.335000+00:00",
+          "ended": "2026-10-13T13:36:46.551000+00:00",
+          "error": null
+        },
+        {
+          "job_id": "0bdd5045-89f5-45c4-aa14-060a721231a7",
+          "affected": 0,
+          "started": "2026-10-13T13:36:54.176000+00:00",
+          "ended": "2026-10-13T13:36:55.868000+00:00",
+          "error": null
+        },
+        {
+          "job_id": "07d23cd8-9cd0-4239-8716-448663fea677",
+          "affected": 0,
+          "started": "2026-10-13T13:36:27.703000+00:00",
+          "ended": "2026-10-13T13:36:29.026000+00:00",
+          "error": null
+        },
+        {
+          "job_id": "4901db89-e780-4680-b2c9-c8674ebc42f4",
+          "affected": 1,
+          "started": "2026-10-13T13:36:25.711000+00:00",
+          "ended": "2026-10-13T13:36:27.032000+00:00",
+          "error": null
+        },
+        {
+          "job_id": "3c130519-5e36-41fc-a12b-69577de4b0e8",
+          "affected": 0,
+          "started": "2026-10-13T13:36:40.981000+00:00",
+          "ended": "2026-10-13T13:36:42.359000+00:00",
+          "error": null
+        },
+        {
+          "job_id": "108e0787-5b8a-4047-8ac0-87bbb254ad40",
+          "affected": 1,
+          "started": "2026-10-13T13:36:25.985000+00:00",
+          "ended": "2026-10-13T13:36:27.468000+00:00",
+          "error": null
+        }
+      ]
+    }
+  ],
+  "bigquery_doc_quote": "An INSERT DML statement that inserts rows to a table doesn't conflict with any other concurrently running DML statement.",
+  "ended_at": "2026-10-13T13:37:12+00:00",
+  "passed": true
+}

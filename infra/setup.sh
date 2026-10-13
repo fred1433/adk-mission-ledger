@@ -10,7 +10,7 @@ PUBLISHER="memory-publisher@${PROJECT}.iam.gserviceaccount.com"
 
 gcloud services enable firestore.googleapis.com bigquery.googleapis.com cloudtasks.googleapis.com \
   run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com \
-  aiplatform.googleapis.com iam.googleapis.com --project="$PROJECT"
+  aiplatform.googleapis.com iam.googleapis.com cloudresourcemanager.googleapis.com --project="$PROJECT"
 
 gcloud firestore databases create --location="$REGION" --type=firestore-native --project="$PROJECT" || true
 bq --project_id="$PROJECT" mk --location=US -d "$DATASET" || true

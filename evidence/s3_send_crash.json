@@ -1,0 +1,106 @@
+{
+  "scenario": "s3_send_crash",
+  "title": "Provider accepts, worker crashes before recording the receipt",
+  "where": "two local OS processes -> Firestore (Google Cloud); test adapters",
+  "started_at": "2026-10-13T13:33:39+00:00",
+  "code_commit": "8be4dce83923",
+  "packages": {
+    "google-adk": "2.11.0",
+    "google-cloud-aiplatform": "1.165.1",
+    "google-cloud-firestore": "2.34.1",
+    "google-cloud-bigquery": "3.46.1",
+    "google-cloud-tasks": "2.26.0",
+    "google-genai": "2.30.0"
+  },
+  "model_mode": "fixture",
+  "paid_model_calls": false,
+  "project": "mission-ledger-1013-13546",
+  "region": "us-central1",
+  "steps": [
+    {
+      "at": "2026-10-13T13:34:01.284+00:00",
+      "what": "[idempotent] process 1 killed after provider acceptance",
+      "exit_code": 137,
+      "action_status": "DISPATCHING",
+      "provider_messages": 1
+    },
+    {
+      "at": "2026-10-13T13:34:14.850+00:00",
+      "what": "[idempotent] process 2 ran the dispatcher",
+      "exit_code": 0,
+      "stdout": [
+        "RESULT SENT retry-same-key"
+      ],
+      "action_status": "SENT",
+      "attempts": 2,
+      "provider_messages": 1,
+      "receipt": {
+        "replayed": true,
+        "provider_message_id": "sbx-094b6f344a90",
+        "accepted_at": "2026-10-13T13:33:57.614365+00:00"
+      }
+    },
+    {
+      "at": "2026-10-13T13:34:25.994+00:00",
+      "what": "[plain] process 1 killed after provider acceptance",
+      "exit_code": 137,
+      "action_status": "DISPATCHING",
+      "provider_messages": 1
+    },
+    {
+      "at": "2026-10-13T13:34:38.407+00:00",
+      "what": "[plain] process 2 ran the dispatcher",
+      "exit_code": 0,
+      "stdout": [
+        "RESULT NEEDS_RECONCILIATION reconcile"
+      ],
+      "action_status": "NEEDS_RECONCILIATION",
+      "attempts": 1,
+      "provider_messages": 1,
+      "receipt": null
+    }
+  ],
+  "assertions": [
+    {
+      "assertion": "[idempotent] process 1 died with the injected fault",
+      "passed": true,
+      "observed": 137
+    },
+    {
+      "assertion": "[idempotent] provider holds exactly one message",
+      "passed": true,
+      "observed": 1
+    },
+    {
+      "assertion": "[idempotent] action ends SENT",
+      "passed": true,
+      "observed": "SENT"
+    },
+    {
+      "assertion": "[idempotent] retry reused the original provider message",
+      "passed": true,
+      "observed": {
+        "replayed": true,
+        "provider_message_id": "sbx-094b6f344a90",
+        "accepted_at": "2026-10-13T13:33:57.614365+00:00"
+      }
+    },
+    {
+      "assertion": "[plain] process 1 died with the injected fault",
+      "passed": true,
+      "observed": 137
+    },
+    {
+      "assertion": "[plain] provider holds exactly one message",
+      "passed": true,
+      "observed": 1
+    },
+    {
+      "assertion": "[plain] action ends NEEDS_RECONCILIATION",
+      "passed": true,
+      "observed": "NEEDS_RECONCILIATION"
+    }
+  ],
+  "ended_at": "2026-10-13T13:34:38+00:00",
+  "passed": true
+}

@@ -6,6 +6,7 @@ requires the provider's HMAC signature.
 from __future__ import annotations
 
 import json
+import urllib.error
 import urllib.request
 
 from fastapi import FastAPI, HTTPException, Request
@@ -16,8 +17,8 @@ from .config import build_info, settings
 app = FastAPI(title="mission-ledger worker")
 
 
-@app.get("/healthz")
-def healthz():
+@app.get("/health")
+def health():
     return {"ok": True, "build": build_info(), "process": trace.process_identity()}
 
 
@@ -62,7 +63,10 @@ def _test_permissions(url: str, token: str, permissions: list[str]) -> list[str]
     req = urllib.request.Request(url, data=json.dumps({"permissions": permissions}).encode(),
                                  headers={"Authorization": f"Bearer {token}",
                                           "Content-Type": "application/json"}, method="POST")
-    return json.loads(urllib.request.urlopen(req, timeout=10).read()).get("permissions", [])
+    try:
+        return json.loads(urllib.request.urlopen(req, timeout=10).read()).get("permissions", [])
+    except urllib.error.HTTPError as e:  # a refusal is itself evidence; return it
+        return [f"ERROR {e.code}: {e.read().decode()[:300]}"]
 
 
 MEMORY_PERMS = ["aiplatform.memories.create", "aiplatform.memories.update",
@@ -94,3 +98,34 @@ def identity():
             "granted_on_project": sorted(project_grants),
             "denied_on_project": sorted(set(MEMORY_PERMS) - set(project_grants)),
             "can_impersonate_publisher": sorted(impersonation)}
+
+
+@app.post("/diag/memory-write-probe")
+def memory_write_probe():
+    """Live IAM proof under the worker's real identity: one valid read, then
+    one valid memories.create that the platform must refuse. Disabled unless
+    LEDGER_ENABLE_PROBES=yes (a successful create would cost an embedding).
+    """
+    import os
+
+    import vertexai
+
+    if os.environ.get("LEDGER_ENABLE_PROBES") != "yes":
+        raise HTTPException(404, "probes disabled")
+    s = settings()
+    client = vertexai.Client(project=s.project, location=s.location)
+    engine = f"projects/{s.project}/locations/{s.location}/reasoningEngines/{s.agent_engine_id}"
+    out = {"process": trace.process_identity(),
+           "service_account": _metadata("instance/service-accounts/default/email")}
+    try:
+        out["read_ok"] = True
+        out["memories_listed"] = len(list(client.agent_engines.memories.list(name=engine)))
+    except Exception as e:  # noqa: BLE001
+        out["read_ok"], out["read_error"] = False, str(e)[:300]
+    try:
+        client.agent_engines.memories.create(name=engine, fact="probe written by the worker identity",
+                                             scope={"probe": "worker"})
+        out["write_refused"] = False
+    except Exception as e:  # noqa: BLE001
+        out["write_refused"], out["write_error"] = True, str(e)[:300]
+    return out
