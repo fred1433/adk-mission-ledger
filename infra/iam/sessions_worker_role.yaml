@@ -1,0 +1,11 @@
+title: Mission ledger worker - sessions only
+description: Agent Platform Sessions read/write for the worker. No memory write permission.
+stage: GA
+includedPermissions:
+- aiplatform.reasoningEngines.get
+- aiplatform.sessions.create
+- aiplatform.sessions.get
+- aiplatform.sessions.list
+- aiplatform.sessions.update
+- aiplatform.sessionEvents.append
+- aiplatform.sessionEvents.list

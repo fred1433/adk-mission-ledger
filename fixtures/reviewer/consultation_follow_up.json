@@ -1,0 +1,4 @@
+{
+  "first_contact": {"verdict": "APPROVE", "reasons": ["both options come from the mission facts"]},
+  "confirm_after_reply": {"verdict": "APPROVE", "reasons": ["confirms the option the contact chose"]}
+}

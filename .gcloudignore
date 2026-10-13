@@ -1,0 +1,7 @@
+.venv/
+.git/
+evidence/
+tests/
+scenarios/
+__pycache__/
+.env*

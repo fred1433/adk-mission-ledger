@@ -1,0 +1,4 @@
+{
+  "preferred_time_of_day": {"verdict": "APPROVE", "reasons": ["stated directly by the contact's choice"]},
+  "discount_for_hesitation": {"verdict": "REJECT", "reasons": ["one reply does not show that a discount caused it"]}
+}

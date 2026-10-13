@@ -1,0 +1,21 @@
+{
+  "about": "Hand-written model turns for the consultation follow-up mission. They drive control flow; they are not captured Gemini output.",
+  "turns": [
+    {"call": {"name": "load_skill", "args": {"skill_name": "follow-up-writer"}}},
+    {"call": {"name": "propose_action", "args": {
+      "purpose": "first_contact", "channel": "email", "recipient": "${mission.contact_alias}",
+      "body": "Hi ${mission.facts.first_name}, thanks for asking about a consultation. I can offer Tuesday at 10:00 or Thursday at 15:00. Which one suits you?"}}},
+    {"call": {"name": "wait_for_reply", "args": {"action_id": "${last.response.action_id}"}}},
+    {"call": {"name": "load_skill", "args": {"skill_name": "reply-triage"}}},
+    {"call": {"name": "propose_memory", "args": {
+      "fact": "Prefers afternoon appointments.", "scope_kind": "contact",
+      "topic": "preferred_time_of_day", "evidence": "Chose Thursday 15:00 over a morning slot."}}},
+    {"call": {"name": "propose_memory", "args": {
+      "fact": "Offering a discount makes hesitant contacts reply faster.", "scope_kind": "playbook",
+      "topic": "discount_for_hesitation", "evidence": "This contact replied after the follow-up."}}},
+    {"call": {"name": "propose_action", "args": {
+      "purpose": "confirm_after_reply", "channel": "email", "recipient": "${mission.contact_alias}",
+      "body": "Thank you, ${mission.facts.first_name}. Thursday at 15:00 is confirmed for your consultation. A coordinator will send the calendar invitation."}}},
+    {"text": "Consultation confirmed for Thursday 15:00. Mission complete."}
+  ]
+}

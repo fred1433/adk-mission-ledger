@@ -1,0 +1,9 @@
+# Direct dependencies, pinned to the versions the evidence was recorded with.
+google-adk==2.11.0
+google-cloud-aiplatform[agent-engines]==1.165.1
+google-cloud-agentplatform==2.4.0
+google-cloud-firestore==2.34.1
+google-cloud-bigquery==3.46.1
+google-cloud-tasks==2.26.0
+fastapi
+uvicorn

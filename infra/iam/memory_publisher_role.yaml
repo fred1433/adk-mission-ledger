@@ -1,0 +1,8 @@
+title: Mission ledger memory publisher - create only
+description: Publishes approved memories with memories.create. No update, delete, generate or rollback.
+stage: GA
+includedPermissions:
+- aiplatform.reasoningEngines.get
+- aiplatform.memories.create
+- aiplatform.memories.get
+- aiplatform.memories.list
