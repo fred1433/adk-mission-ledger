@@ -13,7 +13,6 @@
     "google-genai": "2.30.0"
   },
   "model_mode": "live (worker env)",
-  "paid_model_calls": false,
   "project": "mission-ledger-1013-13546",
   "region": "us-central1",
   "steps": [
@@ -412,5 +411,8 @@
   ],
   "final_text": "I followed up with Jordan offering the two available consultation slots (Tuesday 10:00 and Thursday 15:00). Jordan replied selecting Thursday at 15:00.\n\nWhen attempting to propose a confirmation message, the action was rejected by the gatekeeper because the mission facts state available slots rather than a confirmed booking. I am handing this over to a human coordinator to finalize and confirm the appointment with Jordan.",
   "ended_at": "2026-10-13T14:15:48+00:00",
-  "passed": false
+  "passed": false,
+  "local_process_paid_model_calls": false,
+  "paid_spend": "Gemini on the worker (agent and reviewer)",
+  "metadata_corrected_after_run": "'paid_model_calls' described only the local scenario process; renamed, and 'paid_spend' added to say what this run actually paid for. Measured usage: evidence/live_usage.json."
 }

@@ -2,8 +2,8 @@
   "scenario": "s2_contact_reservation",
   "title": "Contact reservation vs worker lease, and fencing",
   "where": "local process -> Firestore (Google Cloud)",
-  "started_at": "2026-10-13T14:26:18+00:00",
-  "code_commit": "a3b5c67f10d4",
+  "started_at": "2026-10-13T14:54:44+00:00",
+  "code_commit": "17fd96eaac22",
   "packages": {
     "google-adk": "2.11.0",
     "google-cloud-aiplatform": "1.165.1",
@@ -13,140 +13,141 @@
     "google-genai": "2.30.0"
   },
   "model_mode": "fixture",
-  "paid_model_calls": false,
+  "paid_spend": "none",
+  "local_process_paid_model_calls": false,
   "project": "mission-ledger-1013-13546",
   "region": "us-central1",
   "steps": [
     {
-      "at": "2026-10-13T14:26:20.199+00:00",
+      "at": "2026-10-13T14:54:46.530+00:00",
       "what": "registered one contact with two aliases",
-      "contact_id": "c-10131426-e365",
+      "contact_id": "c-10131454-57e7",
       "aliases": [
-        "email:casey.10131426-e365@example.com",
-        "phone:+15551426365"
+        "email:casey.10131454-57e7@example.com",
+        "phone:+15551454577"
       ]
     },
     {
-      "at": "2026-10-13T14:26:23.282+00:00",
+      "at": "2026-10-13T14:54:49.602+00:00",
       "what": "20 concurrent reservation attempts",
-      "elapsed_s": 3.08,
+      "elapsed_s": 3.07,
       "results": [
         [
-          "m-10131426-e365-00",
-          "refused:m-10131426-e365-11",
-          "email:casey.10131426-e365@example.com"
+          "m-10131454-57e7-00",
+          "refused:m-10131454-57e7-07",
+          "email:casey.10131454-57e7@example.com"
         ],
         [
-          "m-10131426-e365-01",
-          "refused:m-10131426-e365-11",
-          "phone:+15551426365"
+          "m-10131454-57e7-01",
+          "refused:m-10131454-57e7-07",
+          "phone:+15551454577"
         ],
         [
-          "m-10131426-e365-02",
-          "refused:m-10131426-e365-11",
-          "email:casey.10131426-e365@example.com"
+          "m-10131454-57e7-02",
+          "refused:m-10131454-57e7-07",
+          "email:casey.10131454-57e7@example.com"
         ],
         [
-          "m-10131426-e365-03",
-          "refused:m-10131426-e365-11",
-          "phone:+15551426365"
+          "m-10131454-57e7-03",
+          "refused:m-10131454-57e7-07",
+          "phone:+15551454577"
         ],
         [
-          "m-10131426-e365-04",
-          "refused:m-10131426-e365-11",
-          "email:casey.10131426-e365@example.com"
+          "m-10131454-57e7-04",
+          "refused:m-10131454-57e7-07",
+          "email:casey.10131454-57e7@example.com"
         ],
         [
-          "m-10131426-e365-05",
-          "refused:m-10131426-e365-11",
-          "phone:+15551426365"
+          "m-10131454-57e7-05",
+          "refused:m-10131454-57e7-07",
+          "phone:+15551454577"
         ],
         [
-          "m-10131426-e365-06",
-          "refused:m-10131426-e365-11",
-          "email:casey.10131426-e365@example.com"
+          "m-10131454-57e7-06",
+          "refused:m-10131454-57e7-07",
+          "email:casey.10131454-57e7@example.com"
         ],
         [
-          "m-10131426-e365-07",
-          "refused:m-10131426-e365-11",
-          "phone:+15551426365"
-        ],
-        [
-          "m-10131426-e365-08",
-          "refused:m-10131426-e365-11",
-          "email:casey.10131426-e365@example.com"
-        ],
-        [
-          "m-10131426-e365-09",
-          "refused:m-10131426-e365-11",
-          "phone:+15551426365"
-        ],
-        [
-          "m-10131426-e365-10",
-          "refused:m-10131426-e365-11",
-          "email:casey.10131426-e365@example.com"
-        ],
-        [
-          "m-10131426-e365-11",
+          "m-10131454-57e7-07",
           "won",
-          "phone:+15551426365"
+          "phone:+15551454577"
         ],
         [
-          "m-10131426-e365-12",
-          "refused:m-10131426-e365-11",
-          "email:casey.10131426-e365@example.com"
+          "m-10131454-57e7-08",
+          "refused:m-10131454-57e7-07",
+          "email:casey.10131454-57e7@example.com"
         ],
         [
-          "m-10131426-e365-13",
-          "refused:m-10131426-e365-11",
-          "phone:+15551426365"
+          "m-10131454-57e7-09",
+          "refused:m-10131454-57e7-07",
+          "phone:+15551454577"
         ],
         [
-          "m-10131426-e365-14",
-          "refused:m-10131426-e365-11",
-          "email:casey.10131426-e365@example.com"
+          "m-10131454-57e7-10",
+          "refused:m-10131454-57e7-07",
+          "email:casey.10131454-57e7@example.com"
         ],
         [
-          "m-10131426-e365-15",
-          "refused:m-10131426-e365-11",
-          "phone:+15551426365"
+          "m-10131454-57e7-11",
+          "refused:m-10131454-57e7-07",
+          "phone:+15551454577"
         ],
         [
-          "m-10131426-e365-16",
-          "refused:m-10131426-e365-11",
-          "email:casey.10131426-e365@example.com"
+          "m-10131454-57e7-12",
+          "refused:m-10131454-57e7-07",
+          "email:casey.10131454-57e7@example.com"
         ],
         [
-          "m-10131426-e365-17",
-          "refused:m-10131426-e365-11",
-          "phone:+15551426365"
+          "m-10131454-57e7-13",
+          "refused:m-10131454-57e7-07",
+          "phone:+15551454577"
         ],
         [
-          "m-10131426-e365-18",
-          "refused:m-10131426-e365-11",
-          "email:casey.10131426-e365@example.com"
+          "m-10131454-57e7-14",
+          "refused:m-10131454-57e7-07",
+          "email:casey.10131454-57e7@example.com"
         ],
         [
-          "m-10131426-e365-19",
-          "refused:m-10131426-e365-11",
-          "phone:+15551426365"
+          "m-10131454-57e7-15",
+          "refused:m-10131454-57e7-07",
+          "phone:+15551454577"
+        ],
+        [
+          "m-10131454-57e7-16",
+          "refused:m-10131454-57e7-07",
+          "email:casey.10131454-57e7@example.com"
+        ],
+        [
+          "m-10131454-57e7-17",
+          "refused:m-10131454-57e7-07",
+          "phone:+15551454577"
+        ],
+        [
+          "m-10131454-57e7-18",
+          "refused:m-10131454-57e7-07",
+          "email:casey.10131454-57e7@example.com"
+        ],
+        [
+          "m-10131454-57e7-19",
+          "refused:m-10131454-57e7-07",
+          "phone:+15551454577"
         ]
       ]
     },
     {
-      "at": "2026-10-13T14:26:25.023+00:00",
+      "at": "2026-10-13T14:54:52.272+00:00",
       "what": "owner mission parked; its worker lease released",
-      "mission": "m-10131426-e365-11",
+      "mission": "m-10131454-57e7-07",
       "generation": 1
     },
     {
-      "at": "2026-10-13T14:26:26.982+00:00",
+      "at": "2026-10-13T14:54:56.514+00:00",
       "what": "worker-1 acquired lease",
       "generation": 1,
       "lease_seconds": 2
     },
     {
-      "at": "2026-10-13T14:26:30.771+00:00",
+      "at": "2026-10-13T14:55:00.203+00:00",
       "what": "worker-1 stalled past expiry; worker-2 took over",
       "generation": 2
     }
@@ -156,33 +157,33 @@
       "assertion": "exactly one reservation owner",
       "passed": true,
       "observed": [
-        "m-10131426-e365-11"
+        "m-10131454-57e7-07"
       ]
     },
     {
       "assertion": "both aliases resolved to the same contact",
       "passed": true,
-      "observed": "c-10131426-e365"
+      "observed": "c-10131454-57e7"
     },
     {
       "assertion": "new mission refused while owner waits for a reply",
       "passed": true,
-      "observed": "refused, holder=m-10131426-e365-11"
+      "observed": "refused, holder=m-10131454-57e7-07"
     },
     {
       "assertion": "stale worker-1 cannot commit an action",
       "passed": true,
-      "observed": "stale generation 1 for m-10131426-e365-fence; current is 2 owned by worker-2"
+      "observed": "stale generation 1 for m-10131454-57e7-fence; current is 2 owned by worker-2"
     },
     {
       "assertion": "current worker-2 can commit",
       "passed": true,
       "observed": {
-        "action_id": "m-10131426-e365-fence.first_contact",
+        "action_id": "m-10131454-57e7-fence.first_contact.t0.v1",
         "generation": 2
       }
     }
   ],
-  "ended_at": "2026-10-13T14:26:32+00:00",
+  "ended_at": "2026-10-13T14:55:02+00:00",
   "passed": true
 }

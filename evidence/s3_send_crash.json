@@ -2,8 +2,8 @@
   "scenario": "s3_send_crash",
   "title": "Provider accepts, worker crashes before recording the receipt",
   "where": "two local OS processes -> Firestore (Google Cloud); test adapters",
-  "started_at": "2026-10-13T14:26:32+00:00",
-  "code_commit": "a3b5c67f10d4",
+  "started_at": "2026-10-13T14:55:02+00:00",
+  "code_commit": "17fd96eaac22",
   "packages": {
     "google-adk": "2.11.0",
     "google-cloud-aiplatform": "1.165.1",
@@ -13,19 +13,20 @@
     "google-genai": "2.30.0"
   },
   "model_mode": "fixture",
-  "paid_model_calls": false,
+  "paid_spend": "none",
+  "local_process_paid_model_calls": false,
   "project": "mission-ledger-1013-13546",
   "region": "us-central1",
   "steps": [
     {
-      "at": "2026-10-13T14:26:54.013+00:00",
+      "at": "2026-10-13T14:55:23.121+00:00",
       "what": "[idempotent] process 1 killed after provider acceptance",
       "exit_code": 137,
       "action_status": "DISPATCHING",
       "provider_messages": 1
     },
     {
-      "at": "2026-10-13T14:27:09.586+00:00",
+      "at": "2026-10-13T14:55:39.168+00:00",
       "what": "[idempotent] process 2 ran the dispatcher",
       "exit_code": 0,
       "stdout": [
@@ -36,19 +37,19 @@
       "provider_messages": 1,
       "receipt": {
         "replayed": true,
-        "provider_message_id": "sbx-9018f3ec17c4",
-        "accepted_at": "2026-10-13T14:26:51.398143+00:00"
+        "provider_message_id": "sbx-26254407da48",
+        "accepted_at": "2026-10-13T14:55:21.043610+00:00"
       }
     },
     {
-      "at": "2026-10-13T14:27:22.481+00:00",
+      "at": "2026-10-13T14:55:52.591+00:00",
       "what": "[plain] process 1 killed after provider acceptance",
       "exit_code": 137,
       "action_status": "DISPATCHING",
       "provider_messages": 1
     },
     {
-      "at": "2026-10-13T14:27:36.208+00:00",
+      "at": "2026-10-13T14:56:05.680+00:00",
       "what": "[plain] process 2 ran the dispatcher",
       "exit_code": 0,
       "stdout": [
@@ -58,6 +59,24 @@
       "attempts": 1,
       "provider_messages": 1,
       "receipt": null
+    },
+    {
+      "at": "2026-10-13T14:56:30.659+00:00",
+      "what": "[slow] process 1 stalled past its lease, process 2 ran, then process 1 sent",
+      "status_after_claim": "APPROVED",
+      "process2": [
+        "RESULT NEEDS_RECONCILIATION reconcile"
+      ],
+      "process1": [
+        "RESULT NEEDS_RECONCILIATION first-attempt"
+      ],
+      "final_status": "NEEDS_RECONCILIATION",
+      "late_receipt": {
+        "accepted_at": "2026-10-13T14:56:27.247576+00:00",
+        "provider_message_id": "sbx-374cfa69b85c",
+        "replayed": false
+      },
+      "provider_messages": 1
     }
   ],
   "assertions": [
@@ -81,8 +100,8 @@
       "passed": true,
       "observed": {
         "replayed": true,
-        "provider_message_id": "sbx-9018f3ec17c4",
-        "accepted_at": "2026-10-13T14:26:51.398143+00:00"
+        "provider_message_id": "sbx-26254407da48",
+        "accepted_at": "2026-10-13T14:55:21.043610+00:00"
       }
     },
     {
@@ -99,8 +118,45 @@
       "assertion": "[plain] action ends NEEDS_RECONCILIATION",
       "passed": true,
       "observed": "NEEDS_RECONCILIATION"
+    },
+    {
+      "assertion": "[slow] process 2 parked it for reconciliation",
+      "passed": true,
+      "observed": "RESULT NEEDS_RECONCILIATION reconcile"
+    },
+    {
+      "assertion": "[slow] late provider receipt kept on the action",
+      "passed": true,
+      "observed": {
+        "accepted_at": "2026-10-13T14:56:27.247576+00:00",
+        "provider_message_id": "sbx-374cfa69b85c",
+        "replayed": false
+      }
+    },
+    {
+      "assertion": "[slow] process 1 reports the real status, not SENT",
+      "passed": true,
+      "observed": [
+        "RESULT NEEDS_RECONCILIATION first-attempt"
+      ]
+    },
+    {
+      "assertion": "[draft] replay returns the same draft without a second write",
+      "passed": true,
+      "observed": {
+        "first": {
+          "provider_message_id": "draft-10131455-d349",
+          "accepted_at": "2026-10-13T14:56:30.659654+00:00",
+          "replayed": false
+        },
+        "second": {
+          "provider_message_id": "draft-10131455-d349",
+          "accepted_at": "2026-10-13T14:56:30.659654+00:00",
+          "replayed": true
+        }
+      }
     }
   ],
-  "ended_at": "2026-10-13T14:27:36+00:00",
+  "ended_at": "2026-10-13T14:56:31+00:00",
   "passed": true
 }

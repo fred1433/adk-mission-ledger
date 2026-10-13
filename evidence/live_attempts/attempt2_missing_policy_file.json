@@ -13,7 +13,6 @@
     "google-genai": "2.30.0"
   },
   "model_mode": "live (worker env)",
-  "paid_model_calls": false,
   "project": "mission-ledger-1013-13546",
   "region": "us-central1",
   "steps": [
@@ -42,5 +41,8 @@
   "mission_id": "m-10131400-2332-a",
   "competing_mission_id": "m-10131400-2332-b",
   "ended_at": "2026-10-13T14:04:14+00:00",
-  "passed": false
+  "passed": false,
+  "local_process_paid_model_calls": false,
+  "paid_spend": "Gemini on the worker (agent; the reviewer call failed before reaching the model)",
+  "metadata_corrected_after_run": "'paid_model_calls' described only the local scenario process; renamed, and 'paid_spend' added to say what this run actually paid for. Measured usage: evidence/live_usage.json."
 }

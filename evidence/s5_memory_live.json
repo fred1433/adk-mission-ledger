@@ -13,7 +13,6 @@
     "google-genai": "2.30.0"
   },
   "model_mode": "fixture",
-  "paid_model_calls": false,
   "project": "mission-ledger-1013-13546",
   "region": "us-central1",
   "steps": [
@@ -175,5 +174,8 @@
   ],
   "ended_at": "2026-10-13T14:20:10+00:00",
   "passed": true,
-  "annotation_added_after_run": "model_mode refers to the memory reviewer (fixture verdicts). Memory Bank calls were live: memories.create, get, list and retrieve with gemini-embedding-001. Run from worker image 2e406f9; the scenario script differed from 2e406f9 only by reading back with the operator identity (committed in the next commit). A first live attempt minutes earlier published one memory, then stopped when the publisher identity was refused aiplatform.memories.retrieve (by design); that is the second of the 2 memories listed."
+  "annotation_added_after_run": "model_mode refers to the memory reviewer (fixture verdicts). Memory Bank calls were live: memories.create, get, list and retrieve with gemini-embedding-001. Run from worker image 2e406f9; the scenario script differed from 2e406f9 only by reading back with the operator identity (committed in the next commit). A first live attempt minutes earlier published one memory, then stopped when the publisher identity was refused aiplatform.memories.retrieve (by design); that is the second of the 2 memories listed.",
+  "local_process_paid_model_calls": false,
+  "paid_spend": "Memory Bank embeddings (memories.create, retrieve)",
+  "metadata_corrected_after_run": "'paid_model_calls' described only the local scenario process; renamed, and 'paid_spend' added to say what this run actually paid for. Measured usage: evidence/live_usage.json."
 }

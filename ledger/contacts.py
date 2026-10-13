@@ -39,6 +39,10 @@ def normalise_alias(raw: str) -> str:
 def resolve(db, raw_alias: str) -> ContactRef:
     key = normalise_alias(raw_alias)
     snap = db.collection(ALIAS_COLLECTION).document(_doc_id(key)).get()
+    if not snap.exists:
+        # Records written before the collision-free encoding (README, scenario
+        # history): without this fallback their aliases resolve as unknown.
+        snap = db.collection(ALIAS_COLLECTION).document(_legacy_doc_id(key)).get()
     if snap.exists:
         return ContactRef(contact_id=snap.get("contact_id"), alias_key=key, known=True)
     return ContactRef(contact_id="provisional:" + key, alias_key=key, known=False)
@@ -55,3 +59,7 @@ def register(db, contact_id: str, aliases: list[str]) -> None:
 
 def _doc_id(alias_key: str) -> str:
     return urllib.parse.quote(alias_key, safe="")
+
+
+def _legacy_doc_id(alias_key: str) -> str:
+    return alias_key.replace("/", "_")

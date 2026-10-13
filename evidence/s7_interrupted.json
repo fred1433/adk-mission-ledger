@@ -1,0 +1,85 @@
+{
+  "scenario": "s7_interrupted",
+  "title": "Failed or abandoned segments end in review, never RUNNING",
+  "where": "local process + sweep on Cloud Run -> Firestore, BigQuery, Sessions",
+  "started_at": "2026-10-13T14:58:17+00:00",
+  "code_commit": "17fd96eaac22",
+  "packages": {
+    "google-adk": "2.11.0",
+    "google-cloud-aiplatform": "1.165.1",
+    "google-cloud-firestore": "2.34.1",
+    "google-cloud-bigquery": "3.46.1",
+    "google-cloud-tasks": "2.26.0",
+    "google-genai": "2.30.0"
+  },
+  "model_mode": "fixture",
+  "paid_spend": "none",
+  "local_process_paid_model_calls": false,
+  "project": "mission-ledger-1013-13546",
+  "region": "us-central1",
+  "steps": [
+    {
+      "at": "2026-10-13T14:58:47.140+00:00",
+      "what": "a. model call failed inside the segment",
+      "result": {
+        "mission_id": "m-10131458-5786-fail",
+        "status": "NEEDS_REVIEW",
+        "error": "RuntimeError: scripted model failure: 403 PERMISSION_DENIED on the model endpoint"
+      },
+      "trace": [
+        "agent.equipped",
+        "agent.model_error",
+        "segment.failed"
+      ]
+    },
+    {
+      "at": "2026-10-13T14:58:53.623+00:00",
+      "what": "b/c. two missions RUNNING: one owner gone (3 s lease), one alive (600 s lease)"
+    },
+    {
+      "at": "2026-10-13T14:59:00.715+00:00",
+      "what": "sweep called on Cloud Run",
+      "response": {
+        "sent_to_review": [
+          {
+            "mission_id": "m-10131458-5786-dead",
+            "status": "NEEDS_REVIEW"
+          }
+        ]
+      },
+      "dead": "NEEDS_REVIEW",
+      "alive": "RUNNING"
+    }
+  ],
+  "assertions": [
+    {
+      "assertion": "a. mission closed as NEEDS_REVIEW by the failing segment itself",
+      "passed": true,
+      "observed": {
+        "status": "NEEDS_REVIEW",
+        "reason": "RuntimeError: scripted model failure: 403 PERMISSION_DENIED on the model endpoint"
+      }
+    },
+    {
+      "assertion": "b. abandoned mission sent to review once its lease expired",
+      "passed": true,
+      "observed": {
+        "status": "NEEDS_REVIEW",
+        "by": {
+          "pid": 1,
+          "where": "cloud-run",
+          "revision": "ledger-worker-00028-nl2",
+          "instance": "0010dd86075aafc04702035a",
+          "service": "ledger-worker"
+        }
+      }
+    },
+    {
+      "assertion": "c. mission with a live lease left alone",
+      "passed": true,
+      "observed": "RUNNING"
+    }
+  ],
+  "ended_at": "2026-10-13T14:59:02+00:00",
+  "passed": true
+}
