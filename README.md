@@ -7,6 +7,9 @@
 > recorded on the earlier commit `2e406f9`. Every other run uses hand-written fixture model turns and
 > reviewer verdicts. Fixes made after the live run are proven offline, on the Firestore emulator and by the
 > fixture scenarios on Google, not by another live run.
+>
+> 2026-10-13: the test environment (Google Cloud project `mission-ledger-1013-13546`) has been torn down.
+> The recorded evidence in `evidence/` remains; re-running the scenarios needs a new project (`infra/setup.sh`).
 
 A services business runs agents that do outreach, content and follow-ups. Each business need arrives as a
 row in BigQuery (a prompt plus a persona and the skills it needs). A worker equips an empty ADK agent for
