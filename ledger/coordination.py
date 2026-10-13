@@ -12,7 +12,7 @@ Two separate lifecycles:
   not by a process. It survives worker shutdown while the mission waits for a
   reply. It ends on closure, cancellation or the business timeout, never
   because a process died. Expiry is checked logically inside the transaction;
-  Firestore TTL deletion (which can lag by up to ~24 h) is only for cleanup.
+  Firestore TTL deletion ("typically within 24 hours") is only for cleanup.
 
 BigQuery holds missions and reporting. It is never consulted to decide whether
 an action may run: a late BigQuery status cannot cause a second execution.

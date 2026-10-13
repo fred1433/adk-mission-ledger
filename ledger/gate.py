@@ -62,6 +62,8 @@ def _live_review(action: dict, mission: dict) -> dict:
     client = genai.Client(vertexai=True, project=s.project, location=s.live_model_location)
     prompt = ((REPO_ROOT / "policies" / "reviewer_rubric.md").read_text()
               + "\n\nMISSION FACTS:\n" + json.dumps(mission.get("facts", {}))
+              + "\n\nVERIFIED INBOUND MESSAGES (recorded by the signed webhook; facts too):\n"
+              + json.dumps(mission.get("verified_inbound", []))
               + "\n\nPROPOSED MESSAGE:\n" + action["body"])
     resp = client.models.generate_content(
         model=s.live_model, contents=prompt,

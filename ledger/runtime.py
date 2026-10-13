@@ -176,6 +176,10 @@ async def resume(mission_id: str, event_id: str) -> dict:
         return {"mission_id": mission_id, "status": "NEEDS_REVIEW", "mismatches": mismatches}
 
     coordination.fenced(db, lease, lambda tx, _d: tx.update(mref, {"status": "RESUMING"}))
+    # The reviewer judges claims against mission facts AND what the contact
+    # actually wrote. Live run 3 showed a correct confirmation rejected
+    # because the reviewer only saw the original facts.
+    mission["verified_inbound"] = [{"from": ev["from"], "body": ev["body"]}]
     ctx = MissionCtx(db, lease, mission, doc["manifest"], doc["thread_token"])
     reply = types.Content(role="user", parts=[types.Part(function_response=types.FunctionResponse(
         id=doc["pending_call_id"], name="wait_for_reply",

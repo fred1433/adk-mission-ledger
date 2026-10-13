@@ -2,8 +2,8 @@
   "scenario": "s1_mission_resume_live",
   "title": "One mission across a worker restart (live Gemini)",
   "where": "Cloud Run worker + Cloud Tasks + Firestore + BigQuery + Agent Platform Sessions",
-  "started_at": "2026-10-13T14:00:08+00:00",
-  "code_commit": "b5b889e11eeb",
+  "started_at": "2026-10-13T14:13:41+00:00",
+  "code_commit": "2e406f9ab6b4",
   "packages": {
     "google-adk": "2.11.0",
     "google-cloud-aiplatform": "1.165.1",
@@ -18,29 +18,399 @@
   "region": "us-central1",
   "steps": [
     {
-      "at": "2026-10-13T14:00:11.469+00:00",
+      "at": "2026-10-13T14:13:44.246+00:00",
       "what": "mission rows written to BigQuery",
       "missions": [
-        "m-10131400-2332-a",
-        "m-10131400-2332-b"
+        "m-10131413-014d-a",
+        "m-10131413-014d-b"
       ],
       "table": "mission-ledger-1013-13546.mission_ledger.missions"
     },
     {
-      "at": "2026-10-13T14:00:12.682+00:00",
+      "at": "2026-10-13T14:13:45.530+00:00",
       "what": "start task enqueued",
-      "task": "start-m-10131400-2332-a"
+      "task": "start-m-10131413-014d-a"
+    },
+    {
+      "at": "2026-10-13T14:14:07.363+00:00",
+      "what": "process A parked the mission",
+      "parked_by": {
+        "service": "ledger-worker",
+        "revision": "ledger-worker-00016-bhd",
+        "instance": "0010dd86074c427bf6d72f5b",
+        "where": "cloud-run",
+        "pid": 1
+      },
+      "generation": 1,
+      "session_id": "1332587373942276096",
+      "invocation_id": "e-0c7c3d69-8468-4274-9d32-2ee5b5dea0ae",
+      "pending_call_id": "call_494442",
+      "manifest": {
+        "skills": {
+          "reply-triage": "b700548bce5cd8ef",
+          "follow-up-writer": "4dec65ba2e55c488"
+        },
+        "policy_version": "outbound-policy-v1",
+        "model": {
+          "max_calls_per_process": 12,
+          "model": "gemini-3.8-flash",
+          "mode": "live"
+        },
+        "code_revision": "2e406f9ab6b4",
+        "adk_version": "2.11.0",
+        "session": {
+          "ttl_seconds": 432000,
+          "id": "1332587373942276096",
+          "agent_engine_id": "3521753610830479360"
+        },
+        "skills_sha": "e9ea936bf463e039",
+        "persona": {
+          "sha": "566dc8bfd6b12053",
+          "name": "account-coordinator"
+        }
+      }
+    },
+    {
+      "at": "2026-10-13T14:14:39.471+00:00",
+      "what": "new Cloud Run revision rolled out; process A's revision retired",
+      "old_revision": "ledger-worker-00016-bhd",
+      "new_revision": "ledger-worker-00017-f54"
+    },
+    {
+      "at": "2026-10-13T14:15:16.976+00:00",
+      "what": "reply delivered to the webhook twice (48 h wait simulated by timestamp)",
+      "first": {
+        "status": "recorded",
+        "mission_id": "m-10131413-014d-a",
+        "wake": "enqueued"
+      },
+      "second": {
+        "status": "duplicate",
+        "mission_id": "m-10131413-014d-a"
+      },
+      "simulated_received_at": "2026-10-15T14:14:07.117660+00:00"
+    },
+    {
+      "at": "2026-10-13T14:15:48.327+00:00",
+      "what": "Agent Platform Sessions record",
+      "name": "projects/mission-ledger-1013-13546/locations/us-central1/reasoningEngines/3521753610830479360/sessions/1332587373942276096",
+      "expire_time": "2026-10-18 14:13:54.611195+00:00",
+      "event_count": 15
+    },
+    {
+      "at": "2026-10-13T14:15:48.562+00:00",
+      "what": "memory candidates left in quarantine by this mission",
+      "candidates": []
     }
   ],
   "assertions": [
     {
-      "assertion": "scenario completed without error",
+      "assertion": "A parked waiting for a reply",
+      "passed": true,
+      "observed": "WAITING_REPLY"
+    },
+    {
+      "assertion": "first message accepted by the provider once",
+      "passed": true,
+      "observed": [
+        "Hi Jordan,\n\nThanks for reaching out about a consultation. We have availability on Tuesday at 10:00 or Thursday at 15:00. Which of those works better for you?"
+      ]
+    },
+    {
+      "assertion": "competing mission via the phone alias refused while A waits",
+      "passed": true,
+      "observed": {
+        "status": "BLOCKED_CONTACT_RESERVED",
+        "blocked_by": "m-10131413-014d-a"
+      }
+    },
+    {
+      "assertion": "second delivery recognised as duplicate",
+      "passed": true,
+      "observed": {
+        "status": "duplicate",
+        "mission_id": "m-10131413-014d-a"
+      }
+    },
+    {
+      "assertion": "mission closed",
       "passed": false,
-      "observed": "TimeoutError(\"m-10131400-2332-a did not reach {'WAITING_REPLY', 'DONE', 'NEEDS_REVIEW'}; last RUNNING\")"
+      "observed": "NEEDS_REVIEW"
+    },
+    {
+      "assertion": "provider holds exactly two messages (first contact + confirmation)",
+      "passed": false,
+      "observed": [
+        "Hi Jordan,\n\nThanks for reaching out about a consultation. We have availability on Tuesday at 10:00 or Thursday at 15:00. Which of those works better for you?"
+      ]
+    },
+    {
+      "assertion": "exactly one resume advanced the mission",
+      "passed": true,
+      "observed": 1
+    },
+    {
+      "assertion": "an extra wake-up task was a no-op",
+      "passed": true,
+      "observed": [
+        "resume.noop"
+      ]
+    },
+    {
+      "assertion": "resume ran in a different process on a different revision",
+      "passed": true,
+      "observed": {
+        "parked_by": {
+          "service": "ledger-worker",
+          "revision": "ledger-worker-00016-bhd",
+          "instance": "0010dd86074c427bf6d72f5b",
+          "where": "cloud-run",
+          "pid": 1
+        },
+        "resumed_by": {
+          "service": "ledger-worker",
+          "revision": "ledger-worker-00017-f54",
+          "instance": "0010dd8607d880852990697a",
+          "where": "cloud-run",
+          "pid": 1
+        }
+      }
+    },
+    {
+      "assertion": "pinned manifest verified before resuming",
+      "passed": true,
+      "observed": []
+    },
+    {
+      "assertion": "contact reservation released on closure",
+      "passed": false,
+      "observed": "HELD"
     }
   ],
-  "mission_id": "m-10131400-2332-a",
-  "competing_mission_id": "m-10131400-2332-b",
-  "ended_at": "2026-10-13T14:04:14+00:00",
+  "mission_id": "m-10131413-014d-a",
+  "competing_mission_id": "m-10131413-014d-b",
+  "agent_calls": [
+    "list_skills",
+    "load_skill",
+    "load_skill",
+    "propose_action",
+    "wait_for_reply",
+    "propose_action",
+    "propose_action"
+  ],
+  "provider_messages": [
+    {
+      "idempotency_key": "m-10131413-014d-a.first_contact",
+      "thread_token": "thr-307d1160cdf44309",
+      "to": "jordan.10131413-014d@example.com",
+      "mission_id": "m-10131413-014d-a",
+      "adapter": "sandbox-mailbox-idempotent",
+      "accepted_at": "2026-10-13T14:14:06.931220+00:00",
+      "body": "Hi Jordan,\n\nThanks for reaching out about a consultation. We have availability on Tuesday at 10:00 or Thursday at 15:00. Which of those works better for you?"
+    }
+  ],
+  "trace": [
+    {
+      "at": "14:13:47.400",
+      "kind": "lease.acquired",
+      "where": "ledger-worker-00016-bhd/d72f5b",
+      "generation": 1
+    },
+    {
+      "at": "14:13:47.534",
+      "kind": "reservation.held",
+      "where": "ledger-worker-00016-bhd/d72f5b"
+    },
+    {
+      "at": "14:13:54.893",
+      "kind": "manifest.pinned",
+      "where": "ledger-worker-00016-bhd/d72f5b"
+    },
+    {
+      "at": "14:13:54.963",
+      "kind": "agent.equipped",
+      "where": "ledger-worker-00016-bhd/d72f5b"
+    },
+    {
+      "at": "14:13:57.767",
+      "kind": "agent.call",
+      "where": "ledger-worker-00016-bhd/d72f5b",
+      "name": "list_skills"
+    },
+    {
+      "at": "14:13:59.700",
+      "kind": "agent.call",
+      "where": "ledger-worker-00016-bhd/d72f5b",
+      "name": "load_skill"
+    },
+    {
+      "at": "14:13:59.723",
+      "kind": "agent.call",
+      "where": "ledger-worker-00016-bhd/d72f5b",
+      "name": "load_skill"
+    },
+    {
+      "at": "14:14:02.107",
+      "kind": "agent.call",
+      "where": "ledger-worker-00016-bhd/d72f5b",
+      "name": "propose_action"
+    },
+    {
+      "at": "14:14:02.317",
+      "kind": "action.proposed",
+      "where": "ledger-worker-00016-bhd/d72f5b",
+      "action_id": "m-10131413-014d-a.first_contact",
+      "generation": 1
+    },
+    {
+      "at": "14:14:03.961",
+      "kind": "gate.verdict",
+      "where": "ledger-worker-00016-bhd/d72f5b",
+      "action_id": "m-10131413-014d-a.first_contact",
+      "decision": "APPROVE",
+      "reasons": [
+        "All details, including the recipient's name, the topic of consultation, and available slots (Tuesday 10:00 and Thursday 15:00), match the provided mission facts."
+      ]
+    },
+    {
+      "at": "14:14:06.600",
+      "kind": "agent.call",
+      "where": "ledger-worker-00016-bhd/d72f5b",
+      "name": "wait_for_reply"
+    },
+    {
+      "at": "14:14:06.635",
+      "kind": "agent.waiting",
+      "where": "ledger-worker-00016-bhd/d72f5b",
+      "action_id": "m-10131413-014d-a.first_contact"
+    },
+    {
+      "at": "14:14:06.665",
+      "kind": "agent.discarded",
+      "where": "ledger-worker-00016-bhd/d72f5b"
+    },
+    {
+      "at": "14:14:06.881",
+      "kind": "dispatch.claim",
+      "where": "ledger-worker-00016-bhd/d72f5b",
+      "action_id": "m-10131413-014d-a.first_contact",
+      "mode": "first-attempt",
+      "generation": 1
+    },
+    {
+      "at": "14:14:06.946",
+      "kind": "provider.accepted",
+      "where": "ledger-worker-00016-bhd/d72f5b",
+      "action_id": "m-10131413-014d-a.first_contact",
+      "provider_message_id": "sbx-d73ff39370a8"
+    },
+    {
+      "at": "14:14:07.094",
+      "kind": "dispatch.sent",
+      "where": "ledger-worker-00016-bhd/d72f5b",
+      "action_id": "m-10131413-014d-a.first_contact",
+      "mode": "first-attempt",
+      "provider_message_id": "sbx-d73ff39370a8"
+    },
+    {
+      "at": "14:14:07.196",
+      "kind": "mission.waiting_reply",
+      "where": "ledger-worker-00016-bhd/d72f5b",
+      "generation": 1
+    },
+    {
+      "at": "14:14:48.267",
+      "kind": "inbound.recorded",
+      "where": "ledger-worker-00017-f54/90697a",
+      "provider_message_id": "sbx-reply-10131413-014d"
+    },
+    {
+      "at": "14:14:48.588",
+      "kind": "wake.enqueued",
+      "where": "ledger-worker-00017-f54/90697a"
+    },
+    {
+      "at": "14:14:49.985",
+      "kind": "lease.acquired",
+      "where": "ledger-worker-00017-f54/90697a",
+      "generation": 2
+    },
+    {
+      "at": "14:14:50.120",
+      "kind": "manifest.verified",
+      "where": "ledger-worker-00017-f54/90697a"
+    },
+    {
+      "at": "14:14:50.286",
+      "kind": "resume.start",
+      "where": "ledger-worker-00017-f54/90697a"
+    },
+    {
+      "at": "14:15:12.971",
+      "kind": "agent.equipped",
+      "where": "ledger-worker-00017-f54/90697a"
+    },
+    {
+      "at": "14:15:16.570",
+      "kind": "inbound.duplicate",
+      "where": "ledger-worker-00017-f54/90697a",
+      "provider_message_id": "sbx-reply-10131413-014d"
+    },
+    {
+      "at": "14:15:23.087",
+      "kind": "agent.call",
+      "where": "ledger-worker-00017-f54/90697a",
+      "name": "propose_action"
+    },
+    {
+      "at": "14:15:23.270",
+      "kind": "action.proposed",
+      "where": "ledger-worker-00017-f54/90697a",
+      "action_id": "m-10131413-014d-a.confirm_after_reply",
+      "generation": 2
+    },
+    {
+      "at": "14:15:31.989",
+      "kind": "gate.verdict",
+      "where": "ledger-worker-00017-f54/90697a",
+      "action_id": "m-10131413-014d-a.confirm_after_reply",
+      "decision": "REJECT",
+      "reasons": [
+        "The message confirms a specific appointment time (Thursday at 15:00), but the mission facts only list available slots rather than a confirmed booking."
+      ]
+    },
+    {
+      "at": "14:15:34.130",
+      "kind": "agent.call",
+      "where": "ledger-worker-00017-f54/90697a",
+      "name": "propose_action"
+    },
+    {
+      "at": "14:15:34.287",
+      "kind": "action.proposed",
+      "where": "ledger-worker-00017-f54/90697a",
+      "action_id": "m-10131413-014d-a.confirm_after_reply",
+      "generation": 2
+    },
+    {
+      "at": "14:15:37.658",
+      "kind": "agent.discarded",
+      "where": "ledger-worker-00017-f54/90697a"
+    },
+    {
+      "at": "14:15:37.864",
+      "kind": "mission.needs_review",
+      "where": "ledger-worker-00017-f54/90697a",
+      "generation": 2
+    },
+    {
+      "at": "14:15:41.417",
+      "kind": "resume.noop",
+      "where": "ledger-worker-00017-f54/90697a",
+      "generation": 3
+    }
+  ],
+  "final_text": "I followed up with Jordan offering the two available consultation slots (Tuesday 10:00 and Thursday 15:00). Jordan replied selecting Thursday at 15:00.\n\nWhen attempting to propose a confirmation message, the action was rejected by the gatekeeper because the mission facts state available slots rather than a confirmed booking. I am handing this over to a human coordinator to finalize and confirm the appointment with Jordan.",
+  "ended_at": "2026-10-13T14:15:48+00:00",
   "passed": false
 }

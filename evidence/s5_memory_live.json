@@ -1,0 +1,178 @@
+{
+  "scenario": "s5_memory_live",
+  "title": "Quarantine, validation, create-only publication (live Memory Bank)",
+  "where": "local validator -> Firestore; publisher -> Agent Platform Memory Bank as memory-publisher; worker identity checks on Cloud Run",
+  "started_at": "2026-10-13T14:19:38+00:00",
+  "code_commit": "2e406f9ab6b4",
+  "packages": {
+    "google-adk": "2.11.0",
+    "google-cloud-aiplatform": "1.165.1",
+    "google-cloud-firestore": "2.34.1",
+    "google-cloud-bigquery": "3.46.1",
+    "google-cloud-tasks": "2.26.0",
+    "google-genai": "2.30.0"
+  },
+  "model_mode": "fixture",
+  "paid_model_calls": false,
+  "project": "mission-ledger-1013-13546",
+  "region": "us-central1",
+  "steps": [
+    {
+      "at": "2026-10-13T14:19:40.781+00:00",
+      "what": "quarantined candidates from the mission",
+      "mission_id": "m-smoke-10131418-1793",
+      "candidates": [
+        {
+          "candidate_id": "mem-09171fdf82",
+          "topic": "discount_for_hesitation",
+          "scope": {
+            "playbook": "follow-up-writer"
+          },
+          "fact": "Offering a discount makes hesitant contacts reply faster.",
+          "status": "QUARANTINED"
+        },
+        {
+          "candidate_id": "mem-645469e649",
+          "topic": "preferred_time_of_day",
+          "scope": {
+            "contact_id": "c-smoke-10131418-1793"
+          },
+          "fact": "Prefers afternoon appointments.",
+          "status": "QUARANTINED"
+        }
+      ]
+    },
+    {
+      "at": "2026-10-13T14:19:43.476+00:00",
+      "what": "validated discount_for_hesitation",
+      "status": "REJECTED",
+      "stage": "rules",
+      "reasons": [
+        "playbook_needs_two_missions"
+      ],
+      "reviewer_mode": null
+    },
+    {
+      "at": "2026-10-13T14:19:44.586+00:00",
+      "what": "validated preferred_time_of_day",
+      "status": "APPROVED",
+      "stage": "reviewer",
+      "reasons": [
+        "stated directly by the contact's choice"
+      ],
+      "reviewer_mode": "fixture:memory.json"
+    },
+    {
+      "at": "2026-10-13T14:19:49.039+00:00",
+      "what": "approved fact published with memories.create",
+      "memory_name": "projects/824779487985/locations/us-central1/reasoningEngines/3521753610830479360/memories/6500596073814294528"
+    },
+    {
+      "at": "2026-10-13T14:20:09.834+00:00",
+      "what": "worker identity probe on Cloud Run",
+      "process": {
+        "pid": 1,
+        "revision": "ledger-worker-00017-f54",
+        "service": "ledger-worker",
+        "instance": "0010dd86071d2f565b71f28c",
+        "where": "cloud-run"
+      },
+      "service_account": "ledger-worker@mission-ledger-1013-13546.iam.gserviceaccount.com",
+      "read_ok": true,
+      "memories_listed": 2,
+      "write_refused": true,
+      "write_error": "403 PERMISSION_DENIED. {'error': {'code': 403, 'message': \"Permission 'aiplatform.memories.create' denied on resource 'projects/824779487985/locations/us-central1/reasoningEngines/3521753610830479360/memories/3850227693106757632'\", 'status': 'PERMISSION_DENIED'}}"
+    },
+    {
+      "at": "2026-10-13T14:20:10.719+00:00",
+      "what": "worker identity permissions (testIamPermissions from inside Cloud Run)",
+      "process": {
+        "pid": 1,
+        "revision": "ledger-worker-00017-f54",
+        "service": "ledger-worker",
+        "instance": "0010dd86071d2f565b71f28c",
+        "where": "cloud-run"
+      },
+      "service_account": "ledger-worker@mission-ledger-1013-13546.iam.gserviceaccount.com",
+      "granted_on_project": [
+        "aiplatform.memories.get",
+        "aiplatform.memories.list",
+        "aiplatform.memories.retrieve",
+        "aiplatform.sessionEvents.append",
+        "aiplatform.sessions.create"
+      ],
+      "denied_on_project": [
+        "aiplatform.memories.create",
+        "aiplatform.memories.delete",
+        "aiplatform.memories.generate",
+        "aiplatform.memories.update"
+      ],
+      "can_impersonate_publisher": []
+    }
+  ],
+  "assertions": [
+    {
+      "assertion": "contact-scoped preference approved",
+      "passed": true,
+      "observed": "APPROVED"
+    },
+    {
+      "assertion": "single-mission playbook lesson rejected",
+      "passed": true,
+      "observed": [
+        "playbook_needs_two_missions"
+      ]
+    },
+    {
+      "assertion": "publisher refuses a rejected candidate",
+      "passed": true,
+      "observed": "mem-09171fdf82 is REJECTED, not APPROVED"
+    },
+    {
+      "assertion": "approved fact read back unchanged",
+      "passed": true,
+      "observed": "Prefers afternoon appointments."
+    },
+    {
+      "assertion": "rejected text absent from the complete listing",
+      "passed": true,
+      "observed": {
+        "memories_listed": 2
+      }
+    },
+    {
+      "assertion": "positive control: approved fact retrieved by similarity search",
+      "passed": true,
+      "observed": [
+        "Prefers afternoon appointments."
+      ]
+    },
+    {
+      "assertion": "worker identity: valid read succeeds",
+      "passed": true,
+      "observed": 2
+    },
+    {
+      "assertion": "worker identity: valid memories.create refused by the platform",
+      "passed": true,
+      "observed": "403 PERMISSION_DENIED. {'error': {'code': 403, 'message': \"Permission 'aiplatform.memories.create' denied on resource 'projects/824779487985/locations/us-central1/reasoningEngines/3521753610830479360/memories/3850227693106757632'\", 'status': 'PERMISSION_DENIED'}}"
+    },
+    {
+      "assertion": "worker lacks memories.create/update/delete/generate",
+      "passed": true,
+      "observed": [
+        "aiplatform.memories.create",
+        "aiplatform.memories.delete",
+        "aiplatform.memories.generate",
+        "aiplatform.memories.update"
+      ]
+    },
+    {
+      "assertion": "worker cannot impersonate the publisher",
+      "passed": true,
+      "observed": []
+    }
+  ],
+  "ended_at": "2026-10-13T14:20:10+00:00",
+  "passed": true
+}

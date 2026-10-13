@@ -63,6 +63,9 @@ def main() -> bool:
             source_credentials=src, target_principal=f"memory-publisher@{s.project}.iam.gserviceaccount.com",
             target_scopes=["https://www.googleapis.com/auth/cloud-platform"])
         api = vertexai.Client(project=s.project, location=s.location, credentials=creds).agent_engines.memories
+        # Verification reads run as the operator: the publisher role is
+        # create/get/list only and cannot run similarity search.
+        reader = vertexai.Client(project=s.project, location=s.location).agent_engines.memories
     else:
         api = memory.FakeMemoryBank()
     pub = memory.MemoryPublisher(d, api, engine)
@@ -88,9 +91,9 @@ def main() -> bool:
     ev.step("approved fact published with memories.create", **published)
     if LIVE:
         got = api.get(name=published["memory_name"])
-        listing = list(api.list(name=engine))
+        listing = list(reader.list(name=engine))
         texts = [m.fact for m in listing]
-        retrieved = list(api.retrieve(name=engine, scope=good["scope"],
+        retrieved = list(reader.retrieve(name=engine, scope=good["scope"],
                                       similarity_search_params={"search_query": "what time of day suits them", "top_k": 3}))
         ev.check("approved fact read back unchanged", got.fact == good["fact"], got.fact)
         ev.check("rejected text absent from the complete listing", bad["fact"] not in texts,
