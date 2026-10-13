@@ -40,6 +40,16 @@ class DispatchRefused(Exception):
     pass
 
 
+def _check_ownership(snap_id: str, a: dict, lease: Lease) -> None:
+    """The lease's mission must own the action, and the document id must be
+    the action's own business identity."""
+    if a.get("mission_id") != lease.mission_id:
+        raise DispatchRefused(f"{snap_id}: belongs to {a.get('mission_id')}, lease is for {lease.mission_id}")
+    expected = action_id(a["mission_id"], a["purpose"], a.get("turn", 0), a.get("revision", 1))
+    if snap_id != expected or a.get("action_id") != expected:
+        raise DispatchRefused(f"{snap_id}: identity mismatch (expected {expected})")
+
+
 MAX_REVISIONS = 3
 
 
@@ -53,7 +63,9 @@ def action_id(mission_id: str, purpose: str, turn: int = 0, revision: int = 1) -
 
 
 def payload_digest(a: dict) -> str:
-    bound = {k: a.get(k) for k in ("channel", "contact_id", "recipient", "body",
+    """Binds the approval to the action's identity and its exact payload."""
+    bound = {k: a.get(k) for k in ("action_id", "mission_id", "purpose", "turn", "revision",
+                                   "channel", "contact_id", "recipient", "body",
                                    "policy_version", "persona_sha", "skills_sha")}
     return hashlib.sha256(json.dumps(bound, sort_keys=True).encode()).hexdigest()
 
@@ -99,7 +111,9 @@ def set_verdict(db: firestore.Client, lease: Lease, aid: str, verdict: dict) -> 
     ref = db.collection(ACTIONS).document(aid)
 
     def _w(tx, _m):
-        a = ref.get(transaction=tx).to_dict()
+        snap = ref.get(transaction=tx)
+        a = snap.to_dict()
+        _check_ownership(snap.id, a, lease)
         if a["status"] != "PROPOSED":
             return a
         update: dict[str, Any] = {"gate": verdict, "gated_at": wall_now()}
@@ -130,6 +144,7 @@ def dispatch(db: firestore.Client, lease: Lease, aid: str, adapter, thread_token
         if not snap.exists:
             raise DispatchRefused(f"{aid}: no such action")
         a = snap.to_dict()
+        _check_ownership(snap.id, a, lease)
         if a["status"] == "SENT":
             return a, "already-sent"
         if a["status"] not in ("APPROVED", "DISPATCHING"):

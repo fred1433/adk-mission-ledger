@@ -42,10 +42,40 @@ def insert_missions(rows: list[dict]) -> None:
         raise RuntimeError(errors)
 
 
-def report(mission_id: str, status: str, detail: dict) -> None:
-    row = {"mission_id": mission_id, "reported_at": wall_now().isoformat(), "status": status,
-           "detail_json": json.dumps(detail, default=str),
-           "worker": json.dumps(process_identity()), "model_mode": settings().model_mode}
-    errors = _client().insert_rows_json(table("mission_reports"), [row])
+OUTBOX = "report_outbox"
+
+
+def report_row(mission_id: str, status: str, detail: dict) -> dict:
+    return {"mission_id": mission_id, "reported_at": wall_now().isoformat(), "status": status,
+            "detail_json": json.dumps(detail, default=str),
+            "worker": json.dumps(process_identity()), "model_mode": settings().model_mode}
+
+
+def stage_report(tx, db, mission_id: str, status: str, detail: dict) -> None:
+    """Write the report row to a Firestore outbox inside the caller's transaction."""
+    tx.set(db.collection(OUTBOX).document(), report_row(mission_id, status, detail))
+
+
+def report(mission_id: str, status: str, detail: dict, db=None) -> None:
+    """Outside a transaction: stage, then try to flush. BigQuery being down never
+    loses a report; the sweep flushes what is left."""
+    from google.cloud import firestore as _fs
+    db = db or _fs.Client(project=settings().project)
+    db.collection(OUTBOX).document().set(report_row(mission_id, status, detail))
+    flush_outbox(db)
+
+
+def flush_outbox(db, limit: int = 200) -> int:
+    snaps = list(db.collection(OUTBOX).limit(limit).stream())
+    if not snaps:
+        return 0
+    try:
+        errors = _client().insert_rows_json(table("mission_reports"), [s.to_dict() for s in snaps],
+                                            row_ids=[s.id for s in snaps])
+    except Exception:  # noqa: BLE001 - stays in the outbox for the next flush
+        return 0
     if errors:
-        raise RuntimeError(errors)
+        return 0
+    for s in snaps:
+        s.reference.delete()
+    return len(snaps)

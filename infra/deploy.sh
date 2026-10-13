@@ -5,7 +5,8 @@ set -euo pipefail
 : "${PROJECT:?}" "${ENGINE_ID:?}" "${WEBHOOK_SECRET:?}"
 REGION="${REGION:-us-central1}"
 WORKER="ledger-worker@${PROJECT}.iam.gserviceaccount.com"
-git diff --quiet HEAD -- ledger skills personas fixtures || { echo "commit first"; exit 1; }
+# Provenance: refuse to build unless the whole working tree is committed (tracked and untracked).
+[ -z "$(git status --porcelain)" ] || { echo "commit first: the build context must equal HEAD"; exit 1; }
 printf '{"git_commit": "%s", "built_at": "%s"}\n' "$(git rev-parse --short=12 HEAD)" "$(date -u +%FT%TZ)" > ledger/_build.json
 gcloud run deploy ledger-worker --quiet --source . --region="$REGION" --project="$PROJECT" \
   --service-account="$WORKER" --no-allow-unauthenticated \
@@ -16,8 +17,9 @@ URL=$(gcloud run services describe ledger-worker --region="$REGION" --project="$
 gcloud run services update ledger-worker --region="$REGION" --project="$PROJECT" --update-env-vars="LEDGER_WORKER_URL=${URL}" >/dev/null
 gcloud run services add-iam-policy-binding ledger-worker --region="$REGION" --project="$PROJECT" \
   --member="serviceAccount:${WORKER}" --role=roles/run.invoker >/dev/null
-# Intake every minute, sweep of interrupted missions every 2 minutes.
-for job in "mission-intake|* * * * *|/tasks/intake" "mission-sweep|*/2 * * * *|/tasks/sweep"; do
+# Intake every minute; sweep of interrupted missions and wake reconciliation every 2 minutes.
+for job in "mission-intake|* * * * *|/tasks/intake" "mission-sweep|*/2 * * * *|/tasks/sweep" \
+           "mission-wake-reconcile|*/2 * * * *|/tasks/reconcile-wakes"; do
   IFS='|' read -r NAME CRON PATH_ <<<"$job"
   gcloud scheduler jobs create http "$NAME" --location="$REGION" --project="$PROJECT" --schedule="$CRON" \
     --uri="${URL}${PATH_}" --http-method=POST --oidc-service-account-email="$WORKER" \

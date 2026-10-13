@@ -3,10 +3,13 @@
 Two separate lifecycles:
 
 * Execution lease (missions/{id}.lease): short, owned by one worker process,
-  carries a monotonically increasing `generation` (fencing token). Every write
-  a worker makes about a mission goes through `fenced()`, which re-reads the
-  generation inside the same transaction. A worker that stalled past its lease
-  and was replaced cannot commit anything afterwards.
+  carries a monotonically increasing `generation` (fencing token). Every
+  mission-control write goes through `fenced()`, which re-reads the generation
+  inside the same transaction: a worker that stalled past its lease and was
+  replaced cannot change mission state afterwards. Fencing cannot cancel a
+  provider request already in flight; provider idempotency prevents duplicate
+  effects for the same action, ambiguous non-idempotent sends go to
+  reconciliation, and late receipts are kept as external facts.
 
 * Contact reservation (contact_reservations/{contact_id}): owned by a MISSION,
   not by a process. It survives worker shutdown while the mission waits for a
@@ -54,6 +57,7 @@ class Lease:
     worker_id: str
     generation: int
     expires_at: dt.datetime
+    previous_status: str | None = None
 
 
 def doc_id(key: str) -> str:
@@ -65,7 +69,11 @@ def client(project: str | None = None) -> firestore.Client:
     return firestore.Client(project=project) if project else firestore.Client()
 
 
-def acquire_lease(db: firestore.Client, mission_id: str, worker_id: str, seconds: int) -> Lease:
+def acquire_lease(db: firestore.Client, mission_id: str, worker_id: str, seconds: int,
+                  init_status: str | None = None) -> Lease:
+    """Take the execution lease. With init_status, a mission that has no status
+    yet (or is QUEUED) gets it in the same transaction, so a crash right after
+    acquisition still leaves a status the sweep can see."""
     ref = db.collection(MISSIONS).document(mission_id)
 
     @firestore.transactional
@@ -79,12 +87,15 @@ def acquire_lease(db: firestore.Client, mission_id: str, worker_id: str, seconds
             raise LeaseUnavailable(f"{mission_id} held by {owner} until {lease['expires_at']}")
         generation = int(data.get("generation", 0)) + 1
         expires = now + dt.timedelta(seconds=seconds)
-        tx.set(ref, {
-            "generation": generation,
+        update = {
+            "mission_id": mission_id, "generation": generation,
             "lease": {"owner": worker_id, "generation": generation, "expires_at": expires},
             "updated_at": now,
-        }, merge=True)
-        return Lease(mission_id, worker_id, generation, expires)
+        }
+        if init_status and data.get("status") in (None, "QUEUED"):
+            update["status"] = init_status
+        tx.set(ref, update, merge=True)
+        return Lease(mission_id, worker_id, generation, expires, data.get("status"))
 
     return _tx(db.transaction(max_attempts=TX_ATTEMPTS))
 

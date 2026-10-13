@@ -31,7 +31,7 @@ from .coordination import MISSIONS, ContactReserved, FencingError
 SESSION_USER = "mission-runner"
 THREADS = "threads"
 INBOUND = "inbound_events"
-INTERRUPTED = {"RUNNING", "RESUMING"}
+INTERRUPTED = {"INITIALIZING", "RUNNING", "RESUMING"}
 STOP_REQUEST = re.compile(r"^\s*(stop|unsubscribe|remove me|do not contact)\b", re.I)
 _LOCAL_SESSIONS = InMemorySessionService()
 
@@ -124,7 +124,7 @@ async def _guarded(ctx: MissionCtx, model, session_id, message, invocation_id, e
         trace.record(ctx.db, ctx.mission["mission_id"], "segment.failed", error=err,
                      generation=ctx.lease.generation)
         coordination.release(ctx.db, ctx.lease, {"status": "NEEDS_REVIEW", "reason": err})
-        missions_bq.report(ctx.mission["mission_id"], "NEEDS_REVIEW", {"segment_failed": err})
+        missions_bq.report(ctx.mission["mission_id"], "NEEDS_REVIEW", {"segment_failed": err}, db=ctx.db)
         return {"mission_id": ctx.mission["mission_id"], "status": "NEEDS_REVIEW", "error": err}
     return _close_segment(ctx, seg, sent, event_ref)
 
@@ -132,16 +132,29 @@ async def _guarded(ctx: MissionCtx, model, session_id, message, invocation_id, e
 async def start(mission_id: str) -> dict:
     db = coordination.client(settings().project)
     s = settings()
-    lease = coordination.acquire_lease(db, mission_id, _worker_id(), s.lease_seconds)
+    lease = coordination.acquire_lease(db, mission_id, _worker_id(), s.lease_seconds,
+                                       init_status="INITIALIZING")
     mref = db.collection(MISSIONS).document(mission_id)
-    doc = mref.get().to_dict() or {}
-    if doc.get("status") in INTERRUPTED:
-        return _interrupted(db, lease, doc)
-    if doc.get("status") not in (None, "QUEUED"):
+    prev = lease.previous_status
+    if prev in INTERRUPTED:
+        return _interrupted(db, lease, {"status": prev})
+    if prev not in (None, "QUEUED"):
         coordination.release(db, lease, {})
-        trace.record(db, mission_id, "start.noop", status=doc.get("status"))
-        return {"mission_id": mission_id, "noop": True, "status": doc.get("status")}
+        trace.record(db, mission_id, "start.noop", status=prev)
+        return {"mission_id": mission_id, "noop": True, "status": prev}
+    try:
+        return await _start_initialized(db, s, lease, mref, mission_id)
+    except (FencingError, coordination.LeaseUnavailable):
+        raise
+    except Exception as e:  # noqa: BLE001 - initialisation failed: review, not limbo
+        err = f"{type(e).__name__}: {str(e)[:300]}"
+        trace.record(db, mission_id, "init.failed", error=err, generation=lease.generation)
+        coordination.release(db, lease, {"status": "NEEDS_REVIEW", "reason": err})
+        missions_bq.report(mission_id, "NEEDS_REVIEW", {"init_failed": err}, db=db)
+        return {"mission_id": mission_id, "status": "NEEDS_REVIEW", "error": err}
 
+
+async def _start_initialized(db, s, lease, mref, mission_id: str) -> dict:
     mission = _mission(db, mission_id)
     trace.record(db, mission_id, "lease.acquired", generation=lease.generation)
     timeout = dt.timedelta(hours=s.reply_wait_policy_hours + 24)
@@ -152,7 +165,7 @@ async def start(mission_id: str) -> dict:
                                          "contact_id": mission["contact_id"]})
         trace.record(db, mission_id, "reservation.refused", contact_id=e.contact_id, holder=e.holder,
                      via_alias=mission["contact_alias"])
-        missions_bq.report(mission_id, "BLOCKED_CONTACT_RESERVED", {"holder": e.holder})
+        missions_bq.report(mission_id, "BLOCKED_CONTACT_RESERVED", {"holder": e.holder}, db=db)
         return {"mission_id": mission_id, "status": "BLOCKED_CONTACT_RESERVED", "holder": e.holder}
     trace.record(db, mission_id, "reservation.held", contact_id=mission["contact_id"],
                  business_expires_at=res["business_expires_at"].isoformat(),
@@ -190,6 +203,11 @@ async def resume(mission_id: str, event_id: str) -> dict:
     ev = eref.get().to_dict() or {}
     if doc.get("status") in INTERRUPTED:
         return _interrupted(db, lease, doc)
+    if ev and ev.get("mission_id") != mission_id:
+        coordination.release(db, lease, {})
+        trace.record(db, mission_id, "resume.refused", event_id=event_id,
+                     reason=f"event belongs to {ev.get('mission_id')}")
+        return {"mission_id": mission_id, "noop": True, "refused": "event belongs to another mission"}
     if ev.get("wake_state") == "CONSUMED" or doc.get("status") != "WAITING_REPLY":
         coordination.release(db, lease, {})
         trace.record(db, mission_id, "resume.noop", event_id=event_id,
@@ -204,10 +222,6 @@ async def resume(mission_id: str, event_id: str) -> dict:
                                          "reason": "reply arrived after the reservation ended"})
         trace.record(db, mission_id, "resume.reconcile", event_id=event_id)
         return {"mission_id": mission_id, "status": "NEEDS_RECONCILIATION"}
-    if is_stop_request(ev.get("body", "")):
-        db.collection(actions.SUPPRESSION).document(coordination.doc_id(doc["contact_id"])).set(
-            {"contact_id": doc["contact_id"], "source_event": event_id, "at": wall_now()})
-        trace.record(db, mission_id, "contact.suppressed", event_id=event_id)
 
     model, descriptor = models.for_mission(mission)
     mismatches = manifest.verify(doc["manifest"], mission, descriptor)
@@ -220,10 +234,12 @@ async def resume(mission_id: str, event_id: str) -> dict:
     coordination.fenced(db, lease, lambda tx, _d: tx.update(
         mref, {"status": "RESUMING", "turn": firestore.Increment(1)}))
     ctx = MissionCtx(db, lease, mission, doc["manifest"], doc["thread_token"])
-    # The reviewer judges claims against mission facts AND what the contact
-    # actually wrote. Live run 3 showed a correct confirmation rejected
-    # because the reviewer only saw the original facts.
-    mission["verified_inbound"] = [{"from": ev["from"], "body": ev["body"]}]
+    # The reviewer sees what the contact actually wrote, as CUSTOMER STATEMENTS:
+    # they can establish a choice or preference, never a commitment the
+    # business facts do not grant (live run 3 rejected a correct confirmation
+    # because the reviewer saw only the original facts).
+    mission["customer_statements"] = [{"from": ev["from"], "body": ev["body"],
+                                       "attributed_contact": ev.get("contact_id")}]
     reply = types.Content(role="user", parts=[types.Part(function_response=types.FunctionResponse(
         id=doc["pending_call_id"], name="wait_for_reply",
         response={"reply": ev["body"], "from": ev["from"],
@@ -243,7 +259,7 @@ def _interrupted(db, lease, doc: dict) -> dict:
                                      "reason": f"segment interrupted while {doc['status']}"})
     trace.record(db, lease.mission_id, "segment.interrupted", previous_status=doc["status"],
                  generation=lease.generation)
-    missions_bq.report(lease.mission_id, "NEEDS_REVIEW", {"interrupted": doc["status"]})
+    missions_bq.report(lease.mission_id, "NEEDS_REVIEW", {"interrupted": doc["status"]}, db=db)
     return {"mission_id": lease.mission_id, "status": "NEEDS_REVIEW"}
 
 
@@ -262,21 +278,30 @@ def sweep_interrupted(db: firestore.Client) -> list[dict]:
             lease = coordination.acquire_lease(db, snap.id, "sweeper/" + uuid.uuid4().hex[:6], 60)
         except coordination.LeaseUnavailable:
             continue
-        doc = db.collection(MISSIONS).document(snap.id).get().to_dict()
-        if doc.get("status") in INTERRUPTED:
-            out.append(_interrupted(db, lease, doc))
+        if lease.previous_status in INTERRUPTED:
+            out.append(_interrupted(db, lease, {"status": lease.previous_status}))
         else:
             coordination.release(db, lease, {})
+    missions_bq.flush_outbox(db)
     return out
 
 
 def _close_segment(ctx: MissionCtx, seg: dict, sent: list[dict], event_ref) -> dict:
     db, mid = ctx.db, ctx.mission["mission_id"]
     statuses = {a["action_id"]: a["status"] for a in sent}
+    mref = db.collection(MISSIONS).document(mid)
+    awaited = (mref.get().to_dict() or {}).get("awaited_action_id") if seg["paused"] else None
+    awaited_status = (db.collection(actions.ACTIONS).document(awaited).get().to_dict() or {}).get("status") \
+        if awaited else None
+    reason = None
     if any(st in ("NEEDS_RECONCILIATION", "BLOCKED") for st in statuses.values()):
-        new_status = "NEEDS_REVIEW"
+        new_status, reason = "NEEDS_REVIEW", "dispatch did not complete"
     elif seg["paused"]:
-        new_status = "WAITING_REPLY"
+        # Only wait for an answer to a message that was actually sent.
+        if awaited_status == "SENT":
+            new_status = "WAITING_REPLY"
+        else:
+            new_status, reason = "NEEDS_REVIEW", f"waiting on {awaited} which is {awaited_status}"
     else:
         mine = [d.to_dict() for d in db.collection(actions.ACTIONS)
                 .where(filter=firestore.FieldFilter("mission_id", "==", mid)).stream()]
@@ -289,24 +314,33 @@ def _close_segment(ctx: MissionCtx, seg: dict, sent: list[dict], event_ref) -> d
             and not seg.get("model_error")
         new_status = "DONE" if done else "NEEDS_REVIEW"
     update = {"status": new_status, "last_segment_text": seg["final_text"],
-              "invocation_id": seg["invocation_id"]}
-    if seg["paused"]:
+              "invocation_id": seg["invocation_id"], "close_reason": reason}
+    if new_status == "WAITING_REPLY":
         update.update(pending_call_id=seg["pending_call_id"], parked_at=wall_now(),
                       parked_by=trace.process_identity())
-    ref = db.collection(MISSIONS).document(mid)
+    res_ref = db.collection(coordination.RESERVATIONS).document(
+        coordination.doc_id(ctx.mission["contact_id"]))
 
     def _w(tx, _d):
+        # all reads first
+        res = res_ref.get(transaction=tx).to_dict() if new_status == "DONE" else None
         if event_ref is not None:
             event_ref.get(transaction=tx)
+        if event_ref is not None:
             tx.update(event_ref, {"wake_state": "CONSUMED", "consumed_at": wall_now(),
                                   "consumed_generation": ctx.lease.generation})
-        tx.update(ref, {**update, "lease.owner": None, "lease.expires_at": None,
-                        "updated_at": wall_now()})
+        tx.update(mref, {**update, "lease.owner": None, "lease.expires_at": None,
+                         "updated_at": wall_now()})
+        # Closing and releasing the contact happen together, or not at all.
+        if res and res.get("mission_id") == mid and res.get("status") == "HELD":
+            tx.update(res_ref, {"status": "RELEASED", "released_at": wall_now(),
+                                "release_reason": "mission closed"})
+        missions_bq.stage_report(tx, db, mid, new_status,
+                                 {"dispatched": statuses, "generation": ctx.lease.generation,
+                                  "reason": reason})
 
     coordination.fenced(db, ctx.lease, _w)
-    if new_status == "DONE":
-        coordination.release_contact(db, ctx.mission["contact_id"], mid, reason="mission closed")
+    missions_bq.flush_outbox(db)
     trace.record(db, mid, f"mission.{new_status.lower()}", dispatched=statuses,
-                 generation=ctx.lease.generation, final_text=seg["final_text"])
-    missions_bq.report(mid, new_status, {"dispatched": statuses, "generation": ctx.lease.generation})
-    return {"mission_id": mid, "status": new_status, "dispatched": statuses}
+                 generation=ctx.lease.generation, final_text=seg["final_text"], reason=reason)
+    return {"mission_id": mid, "status": new_status, "dispatched": statuses, "reason": reason}

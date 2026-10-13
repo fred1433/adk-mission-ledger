@@ -142,7 +142,8 @@ def _main() -> bool:
     ev.step("new Cloud Run revision rolled out; process A's revision retired",
             old_revision=parked_by.get("revision"), new_revision=new_rev)
 
-    reply = {"provider_message_id": f"sbx-reply-{rid}", "thread_token": doc_a["thread_token"],
+    reply = {"provider": "sandbox", "account": "demo", "provider_message_id": f"sbx-reply-{rid}",
+             "thread_token": doc_a["thread_token"],
              "from": email, "body": "Thursday at 15:00 works for me.",
              "simulated_received_at": (doc_a["parked_at"] + dt.timedelta(hours=48)).isoformat()}
     raw_sig = inbound.signature(s.webhook_secret, json.dumps(reply).encode())
@@ -158,7 +159,7 @@ def _main() -> bool:
     ev.check("provider holds exactly two messages (first contact + confirmation)", len(msgs) == 2,
              [m["body"] for m in msgs])
 
-    tasks.enqueue("/tasks/resume", {"mission_id": mid_a, "event_id": reply["provider_message_id"]})
+    tasks.enqueue("/tasks/resume", {"mission_id": mid_a, "event_id": inbound.event_id(reply)})
     t0 = time.time()
     while time.time() - t0 < 90 and not any(e["kind"] == "resume.noop" for e in trace.read(d, mid_a)):
         time.sleep(3)

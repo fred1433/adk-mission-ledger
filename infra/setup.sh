@@ -18,8 +18,16 @@ sed "s/\${DATASET}/${PROJECT}.${DATASET}/g" infra/bigquery/tables.sql | bq --pro
 # Retries must outlast the execution lease (120 s): a task that keeps getting
 # 409 while a dead worker's lease runs out must still be alive when it expires.
 # 10 s doubling to 300 s, 30 attempts: about 2 h of retries.
-gcloud tasks queues create mission-wakeups --location="$REGION" --project="$PROJECT" \
-  --max-attempts=30 --min-backoff=10s --max-backoff=300s --max-doublings=5 || true
+QUEUE_FLAGS=(--location="$REGION" --project="$PROJECT" --max-attempts=30 --min-backoff=10s \
+  --max-backoff=300s --max-doublings=5)
+if gcloud tasks queues describe mission-wakeups --location="$REGION" --project="$PROJECT" >/dev/null 2>&1; then
+  gcloud tasks queues update mission-wakeups "${QUEUE_FLAGS[@]}"
+else
+  gcloud tasks queues create mission-wakeups "${QUEUE_FLAGS[@]}"
+fi
+gcloud tasks queues describe mission-wakeups --location="$REGION" --project="$PROJECT" \
+  --format='value(retryConfig.maxAttempts,retryConfig.maxBackoff)' | grep -q '^30' \
+  || { echo "queue retry settings not applied"; exit 1; }
 
 # Two runtime identities. The worker can read memories, never write them.
 gcloud iam service-accounts create ledger-worker --project="$PROJECT" || true

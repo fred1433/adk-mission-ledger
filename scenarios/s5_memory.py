@@ -9,7 +9,7 @@ Then three adversarial cases on real Firestore:
   a. a candidate still QUARANTINED is handed to the publisher: refused,
      because the publisher re-reads the record instead of trusting its input;
   b. the publisher dies between memories.create and its ledger write; the
-     retry finds the fact in the listing and creates no duplicate;
+     retry targets the same caller-supplied memory id and creates no duplicate;
   c. two contradictory facts on the same contact and topic are validated in
      parallel: one is approved, the other held for review.
 
@@ -75,7 +75,7 @@ def main() -> bool:
         api = reader = memory.FakeMemoryBank()
     pub = memory.MemoryPublisher(d, api, engine)
 
-    results = {c["topic"]: memory.validate(d, c, supporting_missions=1) for c in cands}
+    results = {c["topic"]: memory.validate(d, c["candidate_id"], supporting_missions=1) for c in cands}
     for topic, v in results.items():
         ev.step(f"validated {topic}", status=v["status"], stage=v["validation"]["stage"],
                 reasons=v["validation"]["reasons"], reviewer_mode=v["validation"].get("reviewer_mode"))
@@ -121,7 +121,7 @@ def main() -> bool:
         ev.check("a. publisher refuses a candidate that is still QUARANTINED", True, str(e))
 
     # b. crash between memories.create and the ledger write, then retry
-    v = memory.validate(d, q, supporting_missions=1, reviewer=lambda c: {
+    v = memory.validate(d, q["candidate_id"], supporting_missions=1, reviewer=lambda c: {
         "decision": "APPROVE", "reasons": ["inline"], "reviewer_mode": "fixture:inline"})
     os.environ["LEDGER_FAULT"] = "after_memory_create"
     try:
@@ -131,8 +131,8 @@ def main() -> bool:
     os.environ["LEDGER_FAULT"] = ""
     retry = pub.publish(q["candidate_id"])
     copies = [m for m in reader.list(name=engine) if memory._fact(m) == q["fact"] and memory._scope(m) == scope]
-    ev.check("b. retry reconciles instead of creating a duplicate",
-             retry["mode"] == "reconciled-existing" and len(copies) == 1,
+    ev.check("b. retry hits the same memory id instead of creating a duplicate",
+             retry["mode"] == "already-existed" and len(copies) == 1,
              {"retry": retry, "copies_in_bank": len(copies), "validated": v["status"]})
 
     # c. contradictory facts, validated in parallel
@@ -141,7 +141,7 @@ def main() -> bool:
                               evidence="reply") for f in ("Prefers mornings.", "Prefers evenings.")]
     approve = lambda c: {"decision": "APPROVE", "reasons": ["inline"], "reviewer_mode": "fixture:inline"}  # noqa: E731
     with cf.ThreadPoolExecutor(2) as pool:
-        outs = list(pool.map(lambda c: memory.validate(d, c, 1, reviewer=approve), pair))
+        outs = list(pool.map(lambda c: memory.validate(d, c["candidate_id"], 1, reviewer=approve), pair))
     statuses = sorted(o["status"] for o in outs)
     ev.check("c. two contradictory facts: one approved, one held for review",
              statuses == ["APPROVED", "NEEDS_REVIEW"], [(o["fact"], o["status"]) for o in outs])

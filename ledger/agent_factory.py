@@ -101,11 +101,23 @@ def build(ctx: MissionCtx, model) -> tuple[App, list[str]]:
         return {"action_id": a["action_id"], "status": a["status"],
                 "reasons": (a.get("gate") or {}).get("reasons", [])}
 
-    def wait_for_reply(action_id: str, tool_context: ToolContext) -> None:
+    def wait_for_reply(action_id: str, tool_context: ToolContext) -> dict | None:
         """Park the mission until the contact answers the message `action_id`.
 
         Returns nothing now; the reply arrives later as this call's response.
+        Refused (with an error) unless `action_id` is this mission's approved
+        or sent message.
         """
+        a = db.collection(actions.ACTIONS).document(action_id).get().to_dict() \
+            if action_id else None
+        if not a or a.get("mission_id") != mission["mission_id"] or \
+                a.get("status") not in ("APPROVED", "DISPATCHING", "SENT"):
+            trace.record(db, mission["mission_id"], "agent.wait_refused", action_id=action_id,
+                         status=(a or {}).get("status"))
+            return {"error": "you can only wait for a reply to this mission's approved message",
+                    "action_status": (a or {}).get("status")}
+        mref = db.collection(coordination.MISSIONS).document(mission["mission_id"])
+        coordination.fenced(db, ctx.lease, lambda tx, _d: tx.update(mref, {"awaited_action_id": action_id}))
         trace.record(db, mission["mission_id"], "agent.waiting", action_id=action_id,
                      pending_call_id=tool_context.function_call_id)
         return None
