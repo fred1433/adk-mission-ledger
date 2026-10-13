@@ -2,7 +2,11 @@
 
 > Reference implementation tested on Google Cloud with synthetic data. Not deployed for a client.
 > External delivery uses test adapters (no real recipient exists). The 48-hour reply interval is simulated.
-> Runs marked "live" used Gemini; all other runs use hand-written fixture model turns and reviewer verdicts.
+> Scenario 1 live uses Gemini for the agent and the outbound reviewer; it is tied to commit `cd959e0`.
+> Scenario 5 live uses real Memory Bank operations and embeddings with fixture memory-review verdicts,
+> recorded on the earlier commit `2e406f9`. Every other run uses hand-written fixture model turns and
+> reviewer verdicts. Fixes made after the live run are proven offline, on the Firestore emulator and by the
+> fixture scenarios on Google, not by another live run.
 
 A services business runs agents that do outreach, content and follow-ups. Each business need arrives as a
 row in BigQuery (a prompt plus a persona and the skills it needs). A worker equips an empty ADK agent for
@@ -11,11 +15,15 @@ agent away, and resumes the same workflow later in a different process. This rep
 tested core of that loop: the boundaries where such systems usually go wrong.
 
 - **One contact, one owner.** A contact reservation belongs to the mission, survives the worker, and blocks
-  every competing mission until the mission closes. A separate short lease, renewed while the segment runs
+  every competing mission addressed to the same canonical contact ID until the mission closes or the
+  reservation's business timeout (72 h) passes. Unknown aliases become separate provisional contacts. A separate short lease, renewed while the segment runs
   and carrying a fencing generation, decides which process may act.
 - **No blind resend.** The agent can only propose. A privileged dispatcher sends what the gate approved,
   once; after a crash it retries with the same key, or stops for reconciliation if the provider cannot
-  deduplicate. A late provider receipt is kept, never dropped.
+  deduplicate. A late provider receipt is kept, never dropped. Scenario 3 shows these paths by running
+  the dispatcher directly in separate processes; the deployed service sends an interrupted mission to
+  review instead of re-running the dispatcher automatically. Fencing protects mission-control writes; it
+  cannot cancel a provider request already in flight.
 - **Resume, not replay.** The paused ADK invocation is resumed by id, from a pinned manifest of code,
   persona, skills and model, by a process that shares nothing with the one that parked it.
 - **Nothing stays RUNNING.** A failing segment closes its mission for review itself; a scheduled sweep
@@ -48,7 +56,7 @@ Firestore, BigQuery, Agent Platform Sessions. Full record:
 | 15:13:05 | B | an extra wake-up task for the same event: no-op (generation 3) |
 
 11 of 11 assertions pass. The provider holds exactly two messages for the mission; Sessions holds 15
-events. The fixture run of the same scenario on the same commit is
+events. A fixture run of the same scenario on the later worker code (`f36ab9b`, with the fixes below) is
 [`evidence/s1_mission_resume.json`](evidence/s1_mission_resume.json) (11/11).
 
 ## The race that breaks, then the fix
@@ -67,33 +75,57 @@ require a duplicate.
 
 ## Scenarios
 
-All on 2026-10-13 in the throwaway project `mission-ledger-1013-13546` (us-central1), commit `cd959e0`
-unless stated.
+All on 2026-10-13 in the throwaway project `mission-ledger-1013-13546` (us-central1). Fixture runs on
+worker commit `f36ab9b` (scenarios 1 and 5 recorded from `28f9ef8` scripts, same worker image); live rows
+on the commits stated.
 
 Click a number for its evidence. Unmarked rows use fixture model turns or no model at all.
 
 | # | What it shows *(where it ran)* | Result |
 |---|---|---|
 | [1](evidence/s1_mission_resume.json) | BigQuery intake, park, worker restart, duplicate reply, one resume, competing mission refused *(Cloud Run on 2 revisions, Scheduler, Tasks, Firestore, BigQuery, Sessions)* | 11/11 |
-| [1 live](evidence/s1_mission_resume_live.json) | The same with Gemini as agent and reviewer | 11/11 |
+| [1 live](evidence/s1_mission_resume_live.json) | The same with Gemini as agent and outbound reviewer *(commit `cd959e0`, before the fixes below)* | 11/11 |
 | [2](evidence/s2_contact_reservation.json) | 20 concurrent missions on one contact via two aliases: one owner; refusal persists while parked; stale generation cannot write *(local process, Firestore)* | 5/5 |
 | [3](evidence/s3_send_crash.json) | Crash after provider acceptance (idempotent: same key, 1 message; plain: reconciliation, 1 message); slow worker's late receipt kept, not reported as SENT; draft replay *(2 to 3 local OS processes, Firestore)* | 11/11 |
 | [4](evidence/s4_gate.json) | Over-promise with a "skip review" note rejected; direct dispatch refused; edit after approval blocked; price rejected before the reviewer; revised text and later turns get new ids *(local process, Firestore, BigQuery, Sessions)* | 13/13 |
-| [5](evidence/s5_memory.json) | Create-only publication; forged input refused; crash after create reconciled without duplicate; contradictory facts: one approved, one held; worker cannot write memories or impersonate the publisher *(local, FakeMemoryBank, identity check in Cloud Run)* | 11/11 |
-| [5 live](evidence/s5_memory_live.json) | Memory Bank with live embeddings: fact read back unchanged and retrieved by similarity search; rejected text absent from the full listing; the worker's `memories.create` gets **403** from the platform *(commit `2e406f9`, earlier publisher code)* | 10/10 |
+| [5](evidence/s5_memory.json) | Create-only publication under a stable memory id; forged input refused; crash after create converges on one memory; contradictory facts: one approved, one held; worker cannot write memories or impersonate the publisher *(local, FakeMemoryBank, identity check in Cloud Run)* | 11/11 |
+| [5 live](evidence/s5_memory_live.json) | Memory Bank with live embeddings and fixture memory-review verdicts: fact read back unchanged and retrieved by similarity search; rejected text absent from the full listing; the worker's `memories.create` gets **403** from the platform *(commit `2e406f9`, earlier publisher code; not re-run)* | 10/10 |
 | [6](evidence/s6_bigquery_merge_race.json) | Insert-only MERGE race vs Firestore transaction *(local process, BigQuery, Firestore)* | 2 rows vs 1 winner |
 | [7](evidence/s7_interrupted.json) | Model failure closes the mission for review; dead worker swept after its lease expires; live lease untouched *(local, sweep on Cloud Run)* | 3/3 |
 
-Offline: `pytest tests` (18 tests, no network).
+Offline: `pytest tests` runs 18 tests with no network, plus 23 counterexample tests on the Firestore
+emulator when `FIRESTORE_EMULATOR_HOST` is set (`tests/test_counterexamples.py`): 41 pass.
+
+### Fixed after the live run (second external review)
+
+An external review executed counterexamples against the code. Each one now has a test on the emulator:
+
+1. **Memory approval bound to content.** Validation reads the stored candidate by id and binds the verdict to
+   a digest of fact, scope, topic, evidence and provenance; a change during or after review blocks
+   publication. Publication uses a stable caller-supplied memory id, so concurrent or repeated publishers
+   converge on one memory, which is read back and compared.
+2. **Action ownership.** `set_verdict` and `dispatch` refuse an action that does not belong to the lease's
+   mission or whose document id is not its business identity; the approval digest covers that identity.
+3. **Wake path.** Wake reconciliation is scheduled every 2 minutes; event state only moves forward; task
+   names are hashes of (provider, account, message id, attempt); stale enqueued events are re-armed; the
+   queue is created or updated and its retry settings verified.
+4. **Lifecycle.** `wait_for_reply` only accepts this mission's approved message, and a mission parks only if
+   that message was sent; initialisation is a recoverable INITIALIZING state covered by the sweep; closing,
+   contact release and the report outbox commit in one transaction.
+5. **Inbound.** Events are validated and namespaced by provider and account, attributed to a mission only
+   if the sender resolves to that mission's contact, and refused by a resume for another mission;
+   opt-outs are recorded whatever the mission's state; the reviewer input separates business facts,
+   customer statements and untrusted text, and customer statements cannot grant commitments.
 
 ### Live runs, attempt by attempt
 
-Bounded runs: at most 12 model calls per process, output capped, low thinking level, temperature 0, one
-mission per attempt. Measured usage per attempt: [`evidence/live_usage.json`](evidence/live_usage.json)
+Bounded runs: the agent's model calls were capped at 12 per worker process (reviewer calls are separate and
+not counted, and the counter persists across missions in a warm instance: a demonstration budget, not a
+per-mission limit), output capped, low thinking level, temperature 0, one mission per attempt. Measured usage per attempt: [`evidence/live_usage.json`](evidence/live_usage.json)
 (agent calls from Sessions usage metadata; reviewer calls traced from the final run). Total measured:
-25 calls, 40,843 input and 5,387 output tokens (thinking included), **$0.051 at list price**; two reviewer
-calls in attempt 3 and the Memory Bank embeddings were not metered and add well under a cent. Estimates
-from recorded usage, before the invoice.
+25 calls, 40,843 input and 5,387 output tokens (thinking included), **$0.051 at list price**. Two earlier
+reviewer calls (attempt 3) and the Memory Bank embeddings were not metered; the total shown excludes them.
+Estimates from recorded usage, before the invoice.
 
 1. The agent spent its output budget thinking and stopped on `MAX_TOKENS` before proposing anything; the
    worker wrongly closed the mission as DONE. Fixed: no sent action or a model error means review.
@@ -117,6 +149,21 @@ attempts had left unstarted. Because a document-id encoding change had just made
 unreadable, they ran against provisional contacts and were not blocked (sandbox sends only). The lookup now
 falls back to the old encoding; a real deployment would migrate the records.
 
+## Known limits, stated and not fixed
+
+- **Lease liveness.** The lease is renewed on ADK events and before dispatch, not during a single blocked
+  call. A model or reviewer call longer than the 120 s lease makes a healthy worker lose ownership and be
+  swept to review. Fail-closed, but call deadlines must stay below the lease, or a heartbeat is needed.
+- **Intake window.** The intake reads the oldest 200 rows of the last 48 hours, then skips started ones.
+  Fine at 60 missions a day; a burst above 200 can starve newer rows until a cursor or pagination exists.
+- **Manifest.** It pins code, persona, skills and model, not the mission's prompt, facts or contact
+  snapshot; resume re-reads the BigQuery row, so an edited row changes the review context unnoticed.
+- **Build provenance.** `deploy.sh` now refuses to build from a dirty or untracked tree; images built
+  before that check carry only the commit recorded in `_build.json`.
+- **Cost.** Zero cached tokens were observed live; without caching the representative Gemini line is
+  about $119.70 a month instead of $81.97, and the intake's own Firestore reads (about 5.2 million a
+  month) are outside the per-mission lines. See [COSTS.md](COSTS.md).
+
 ## Topology (as tested)
 
 ```
@@ -126,7 +173,8 @@ Cloud Tasks (OIDC) -> Cloud Run worker (ADK, Python)
    Agent Platform Sessions (Agent Runtime instance, no code deployed)
    BigQuery  : mission_reports (append only)
 Signed webhook /inbound -> Firestore event (dedup) -> Cloud Tasks wake -> /tasks/resume
-Scheduler (2 min) -> /tasks/sweep : expired RUNNING missions -> NEEDS_REVIEW
+Scheduler (2 min) -> /tasks/sweep : expired INITIALIZING/RUNNING missions -> NEEDS_REVIEW
+Scheduler (2 min) -> /tasks/reconcile-wakes : PENDING or stale wake-ups -> Cloud Tasks
 memory-publisher identity -> memories.create -> Agent Platform Memory Bank
 ```
 
@@ -139,6 +187,12 @@ Memory Bank (embedding model `gemini-embedding-001`). Firestore decides who may 
   publication, with recorded failures. It is not a full platform: no real email, voice, social or CMS
   integration, no dashboard.
 - It has not run in production for anyone. All contacts are synthetic (`example.com`, fictional numbers).
+- Memory retrieval is not wired into mission execution: agents propose memories, and publication and
+  read-back are proven separately (scenario 5); no later mission is shown being equipped with validated
+  learnings.
+- Scenario 5 live exercised the publisher's Memory Bank calls under the `memory-publisher` identity; the
+  Firestore side of that process ran as the operator. A standalone publisher service under its own identity
+  is a production step.
 - In scenarios 2 to 4, 6 and 7a the workers are local processes against real Google services.
 - Approvals (action approval, memory candidate status) are enforced by code, not by IAM: the worker's
   Firestore role could write those fields. Production would keep approvals in a database the worker cannot

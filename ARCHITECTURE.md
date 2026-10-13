@@ -31,9 +31,12 @@ fifth live run, on the final code, passed end to end.
 - Nothing waits. The agent calls a long-running `wait_for_reply` that returns nothing; ADK pauses the
   invocation (`ResumabilityConfig(is_resumable=True)`); the worker records session id, invocation id and the
   pending function-call id, releases its lease and exits the segment.
-- A reply reaches a signed webhook, which writes an inbound event keyed by the provider's message id
-  (duplicates fail on `create()`), correlates it through the thread token, then enqueues a named Cloud
-  Tasks wake-up. A crash between the two leaves a PENDING event that `reconcile_pending_wakes` re-enqueues.
+- A reply reaches a signed webhook, which validates it, keys the event by provider, account and message id
+  (duplicates fail on `create()`), attributes it only if the thread token maps to a mission AND the sender
+  resolves to that mission's contact, then enqueues a Cloud Tasks wake-up whose name is a hash of the event
+  and attempt. A crash between the two leaves a PENDING event that the scheduled `reconcile-wakes` job
+  re-enqueues; a wake that outlived the queue's retries is re-armed with a new attempt. Event state only
+  moves forward.
 - The resumed segment takes a new lease (generation + 1), checks that the contact is still reserved for
   this mission, verifies the pinned manifest, and feeds the reply to ADK as the function response of the
   pending call. It consumes the event in the same fenced transaction that closes the segment, so a second
@@ -54,10 +57,10 @@ fifth live run, on the final code, passed end to end.
   evidence required; a playbook rule needs at least two missions), then a reviewer. Approval claims a
   (scope, topic) slot in a Firestore transaction, so a second, contradictory fact on the same slot is held
   for review, whether the two are validated in sequence or in parallel (scenario 5c).
-- A separate `memory-publisher` identity writes approved facts with `memories.create` and the exact approved
-  text. It re-reads the candidate and moves it APPROVED to PUBLISHING in a transaction (a forged or stale
-  input is refused), and a retry after a crash between `create` and the ledger write finds the fact in the
-  listing instead of creating a duplicate. Never `generate` (its consolidation can update or delete existing memories), never IngestEvents,
+- Validation reads the stored candidate by id and binds the approval to a digest of its fact, scope, topic,
+  evidence and provenance. A separate `memory-publisher` identity writes approved facts with
+  `memories.create` and the exact approved text, under a stable caller-supplied memory id: concurrent or
+  repeated publishers converge on one memory, which is read back and compared with the approved payload. Never `generate` (its consolidation can update or delete existing memories), never IngestEvents,
   never `add_session_to_memory`. An approval ledger keeps provenance.
 - IAM, proven live under the worker's real Cloud Run identity: it can read, and its `memories.create` is
   refused by the platform (403). The publisher has a custom role limited to `memories.create`, `get`,
@@ -80,8 +83,9 @@ lease, gate and dispatcher in this repository do not depend on ADK and would sit
 1. Provider semantics per channel: which ones honour an idempotency key (retry) and which need
    reconciliation, and who works the reconciliation queue.
 2. Where the dispatcher runs: a separate service and identity holding provider credentials.
-3. The reviewer's inputs: mission facts plus verified inbound messages (fixed after live run 3), and how
-   often NEEDS_REVIEW is acceptable to the team.
+3. The reviewer's inputs: business facts, customer statements and untrusted text kept apart (customer
+   statements can set a choice, never a commitment), and how often NEEDS_REVIEW is acceptable. The fixes
+   made after the live run have not been exercised with a live model.
 4. The alias directory: which system is authoritative for contacts.
 5. Cloud Run worker with managed Sessions (tested) versus deploying the worker to Agent Runtime (not tested).
 6. Opt-out handling: a reply starting with "stop" or "unsubscribe" suppresses the contact before the agent

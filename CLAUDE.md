@@ -21,6 +21,11 @@ Invariants. A change that breaks one of these is wrong even if tests pass.
    the queue's retry window longer than the lease.
 9. **Action ids are business ids** (mission, purpose, turn, revision). Never derive them from model output
    ids, which change when a turn is regenerated.
-10. **No paid model calls by default.** Fixture mode is the default; live needs two environment switches.
+10. **Ownership everywhere.** An action is only gated or dispatched under a lease for its own mission; a
+    mission parks only on a message that was SENT; an inbound event is attributed only when its sender
+    resolves to the mission's contact.
+11. **Approvals bind content.** Memory approval is a digest of the stored candidate; publication uses the
+    stable memory id from `memory_id_for`.
+12. **No paid model calls by default.** Fixture mode is the default; live needs two environment switches.
 
 Before committing: `pytest tests` (offline). Scenario scripts need a throwaway project (see README).

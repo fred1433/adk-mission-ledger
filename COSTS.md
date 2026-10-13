@@ -30,8 +30,15 @@ Prices checked 2026-10-13 on the official pages listed at the end. Gross = befor
 | Cloud Run (1 vCPU, 1 GiB, request-billed) | $1.00 | $0.00 | $2.47 | $0.00 | $9.31 | $4.10 |
 | **Total, Google list price** | $50.84 | $47.07 | $169.43 | $163.96 | $937.74 | $928.92 |
 
+## Sensitivity: no prompt caching
+
+The profiles assume 40 to 50% of agent input is cached. The live runs recorded **zero** cached tokens. With no caching, the Gemini line becomes (introductory price): light $33.10, representative $119.70, heavy $629.17.
+
 ## Not in these totals (shown so they are not mistaken for zero)
 
+- Firestore reads made by the intake itself: about 120 mission records checked every minute is 5,184,000 reads a month, about $1.56 gross before the free tier; the per-mission Firestore line does not include them.
+- Cloud Scheduler jobs (intake, sweep, wake reconciliation) and long-term storage of traces and reports.
+- The introductory Gemini price is a promotion applied as 50% credits back on net spend; the pre-credit invoice line is about double.
 - Voice and telephony minutes, SMS, social network and messaging provider fees, email delivery provider.
 - Human review time for NEEDS_REVIEW and NEEDS_RECONCILIATION missions.
 - Deploying the worker to Agent Runtime instead of Cloud Run (not the tested topology).

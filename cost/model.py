@@ -120,7 +120,18 @@ def render() -> str:
             label = f"**{line}**" if line.startswith("Total") else line
             out.append(f"| {label} | " + " | ".join(cells) + " |")
         out.append("")
-    out += ["## Not in these totals (shown so they are not mistaken for zero)", "",
+    intro = PRICES["flash_intro"]
+    out += ["## Sensitivity: no prompt caching", "",
+            "The profiles assume 40 to 50% of agent input is cached. The live runs recorded **zero** cached "
+            "tokens. With no caching, the Gemini line becomes (introductory price): "
+            + ", ".join(f"{n} ${monthly({**p, 'cached': 0}, intro)['Gemini (agent + reviewer)'][0]:,.2f}"
+                        for n, p in PROFILES.items()) + ".", "",
+            "## Not in these totals (shown so they are not mistaken for zero)", "",
+            "- Firestore reads made by the intake itself: about 120 mission records checked every minute is "
+            f"{120 * 60 * 24 * 30:,} reads a month, about ${120 * 60 * 24 * 30 / 1e5 * PRICES['fs_read_100k']:.2f} "
+            "gross before the free tier; the per-mission Firestore line does not include them.",
+            "- Cloud Scheduler jobs (intake, sweep, wake reconciliation) and long-term storage of traces and reports.",
+            "- The introductory Gemini price is a promotion applied as 50% credits back on net spend; the pre-credit invoice line is about double.",
             "- Voice and telephony minutes, SMS, social network and messaging provider fees, email delivery provider.",
             "- Human review time for NEEDS_REVIEW and NEEDS_RECONCILIATION missions.",
             "- Deploying the worker to Agent Runtime instead of Cloud Run (not the tested topology).",
