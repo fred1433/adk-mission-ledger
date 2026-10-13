@@ -70,17 +70,19 @@ require a duplicate.
 All on 2026-10-13 in the throwaway project `mission-ledger-1013-13546` (us-central1), commit `cd959e0`
 unless stated.
 
-| # | What it shows | Where | Model | Result | Evidence |
-|---|---|---|---|---|---|
-| 1 | BigQuery intake, park, worker restart, duplicate reply, one resume, competing mission refused | Cloud Run (2 revisions), Scheduler, Tasks, Firestore, BigQuery, Sessions | fixture | 11/11 | [s1](evidence/s1_mission_resume.json) |
-| 1 live | The same with Gemini as agent and reviewer | same | **live** | 11/11 | [s1 live](evidence/s1_mission_resume_live.json) |
-| 2 | 20 concurrent missions on one contact via two aliases: one owner; refusal persists while parked; stale generation cannot write | local process, Firestore | none | 5/5 | [s2](evidence/s2_contact_reservation.json) |
-| 3 | Crash after provider acceptance (idempotent: same key, 1 message; plain: reconciliation, 1 message); slow worker's late receipt kept and not reported as SENT; draft replay | 2 to 3 local OS processes, Firestore | none | 11/11 | [s3](evidence/s3_send_crash.json) |
-| 4 | Over-promise with "skip review" note rejected; direct dispatch refused; edit after approval blocked; price rejected before the reviewer; revised text gets a new revision, same purpose on a later turn gets a new id | local process, Firestore, BigQuery, Sessions | fixture | 13/13 | [s4](evidence/s4_gate.json) |
-| 5 | Quarantine, validation, create-only publication; forged input refused; crash after create reconciled without duplicate; two contradictory facts: one approved, one held; worker cannot write memories or impersonate the publisher | local + Cloud Run identity check; FakeMemoryBank | fixture | 11/11 | [s5](evidence/s5_memory.json) |
-| 5 live | Against Memory Bank: fact read back unchanged, retrieved by similarity search, rejected text absent from the full listing; worker reads, its `memories.create` gets **403** from the platform | publisher impersonated locally; probe in Cloud Run | live embeddings | 10/10 (commit `2e406f9`, earlier publisher code) | [s5 live](evidence/s5_memory_live.json) |
-| 6 | Insert-only MERGE race vs Firestore transaction | local process, BigQuery, Firestore | none | 2 rows vs 1 winner | [s6](evidence/s6_bigquery_merge_race.json) |
-| 7 | Model failure inside a segment closes the mission for review; dead worker swept once its lease expires; live lease untouched | local + `/tasks/sweep` on Cloud Run | fixture | 3/3 | [s7](evidence/s7_interrupted.json) |
+Click a number for its evidence. Unmarked rows use fixture model turns or no model at all.
+
+| # | What it shows *(where it ran)* | Result |
+|---|---|---|
+| [1](evidence/s1_mission_resume.json) | BigQuery intake, park, worker restart, duplicate reply, one resume, competing mission refused *(Cloud Run on 2 revisions, Scheduler, Tasks, Firestore, BigQuery, Sessions)* | 11/11 |
+| [1 live](evidence/s1_mission_resume_live.json) | The same with Gemini as agent and reviewer | 11/11 |
+| [2](evidence/s2_contact_reservation.json) | 20 concurrent missions on one contact via two aliases: one owner; refusal persists while parked; stale generation cannot write *(local process, Firestore)* | 5/5 |
+| [3](evidence/s3_send_crash.json) | Crash after provider acceptance (idempotent: same key, 1 message; plain: reconciliation, 1 message); slow worker's late receipt kept, not reported as SENT; draft replay *(2 to 3 local OS processes, Firestore)* | 11/11 |
+| [4](evidence/s4_gate.json) | Over-promise with a "skip review" note rejected; direct dispatch refused; edit after approval blocked; price rejected before the reviewer; revised text and later turns get new ids *(local process, Firestore, BigQuery, Sessions)* | 13/13 |
+| [5](evidence/s5_memory.json) | Create-only publication; forged input refused; crash after create reconciled without duplicate; contradictory facts: one approved, one held; worker cannot write memories or impersonate the publisher *(local, FakeMemoryBank, identity check in Cloud Run)* | 11/11 |
+| [5 live](evidence/s5_memory_live.json) | Memory Bank with live embeddings: fact read back unchanged and retrieved by similarity search; rejected text absent from the full listing; the worker's `memories.create` gets **403** from the platform *(commit `2e406f9`, earlier publisher code)* | 10/10 |
+| [6](evidence/s6_bigquery_merge_race.json) | Insert-only MERGE race vs Firestore transaction *(local process, BigQuery, Firestore)* | 2 rows vs 1 winner |
+| [7](evidence/s7_interrupted.json) | Model failure closes the mission for review; dead worker swept after its lease expires; live lease untouched *(local, sweep on Cloud Run)* | 3/3 |
 
 Offline: `pytest tests` (18 tests, no network).
 
@@ -147,16 +149,16 @@ Memory Bank (embedding model `gemini-embedding-001`). Firestore decides who may 
 ## Layout
 
 ```
-ledger/      worker: coordination.py (leases, reservations), actions.py (proposal, dispatch),
-             gate.py, runtime.py (segments, sweep), intake.py, agent_factory.py, manifest.py,
-             memory.py, inbound.py
-skills/      versioned skills loaded with ADK SkillToolset
-personas/    persona instructions
-policies/    reviewer rubric (not visible to the agent)
-fixtures/    hand-written model turns and reviewer verdicts
-scenarios/   recorded scenarios and usage_report.py; evidence/ holds their output
-infra/       setup.sh, deploy.sh (with scheduler jobs), BigQuery DDL, custom IAM roles
-cost/        monthly cost model -> COSTS.md
+ledger/     the worker: coordination (leases, reservations), actions
+            (proposal, dispatch), gate, runtime (segments, sweep), intake,
+            agent_factory, manifest, memory, inbound
+skills/     versioned skills, loaded with ADK SkillToolset
+personas/   persona instructions
+policies/   reviewer rubric (not visible to the agent)
+fixtures/   hand-written model turns and reviewer verdicts
+scenarios/  recorded scenarios, usage_report.py; output in evidence/
+infra/      setup.sh, deploy.sh (+ scheduler jobs), DDL, IAM roles
+cost/       monthly cost model -> COSTS.md
 ```
 
 Pinned: `google-adk==2.11.0`, `google-cloud-aiplatform==1.165.1`, `google-cloud-firestore==2.34.1`,
