@@ -17,6 +17,10 @@ Invariants. A change that breaks one of these is wrong even if tests pass.
    NEEDS_RECONCILIATION.
 7. **Resume against the pinned manifest.** If you change skills, personas, fixtures or the model, parked
    missions will stop for review on resume. That is intended.
-8. **No paid model calls by default.** Fixture mode is the default; live needs two environment switches.
+8. **No mission left RUNNING.** Segment work goes through `runtime._guarded`; keep the sweep scheduled and
+   the queue's retry window longer than the lease.
+9. **Action ids are business ids** (mission, purpose, turn, revision). Never derive them from model output
+   ids, which change when a turn is regenerated.
+10. **No paid model calls by default.** Fixture mode is the default; live needs two environment switches.
 
 Before committing: `pytest tests` (offline). Scenario scripts need a throwaway project (see README).

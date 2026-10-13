@@ -2,8 +2,8 @@
   "scenario": "s5_memory",
   "title": "Quarantine, validation, create-only publication",
   "where": "local validator and publisher -> Firestore; bank: FakeMemoryBank (in process); worker identity checks inside Cloud Run",
-  "started_at": "2026-10-13T14:53:44+00:00",
-  "code_commit": "17fd96eaac22",
+  "started_at": "2026-10-13T15:05:54+00:00",
+  "code_commit": "cd959e0f596e",
   "packages": {
     "google-adk": "2.11.0",
     "google-cloud-aiplatform": "1.165.1",
@@ -19,42 +19,32 @@
   "region": "us-central1",
   "steps": [
     {
-      "at": "2026-10-13T14:53:46.600+00:00",
+      "at": "2026-10-13T15:05:56.158+00:00",
       "what": "quarantined candidates from scenario 1",
-      "mission_id": "m-10131451-d952-a",
+      "mission_id": "m-10131504-f135-a",
       "candidates": [
         {
-          "candidate_id": "mem-1a49af52dd",
+          "candidate_id": "mem-0737d5ecb0",
+          "topic": "preferred_time_of_day",
+          "scope": {
+            "contact_id": "c-10131504-f135-jordan"
+          },
+          "fact": "Prefers afternoon appointments.",
+          "status": "QUARANTINED"
+        },
+        {
+          "candidate_id": "mem-25f5117837",
           "topic": "discount_for_hesitation",
           "scope": {
             "playbook": "follow-up-writer"
           },
           "fact": "Offering a discount makes hesitant contacts reply faster.",
           "status": "QUARANTINED"
-        },
-        {
-          "candidate_id": "mem-2858f8298a",
-          "topic": "preferred_time_of_day",
-          "scope": {
-            "contact_id": "c-10131451-d952-jordan"
-          },
-          "fact": "Prefers afternoon appointments.",
-          "status": "QUARANTINED"
         }
       ]
     },
     {
-      "at": "2026-10-13T14:53:51.018+00:00",
-      "what": "validated discount_for_hesitation",
-      "status": "REJECTED",
-      "stage": "rules",
-      "reasons": [
-        "playbook_needs_two_missions"
-      ],
-      "reviewer_mode": null
-    },
-    {
-      "at": "2026-10-13T14:53:51.018+00:00",
+      "at": "2026-10-13T15:06:00.572+00:00",
       "what": "validated preferred_time_of_day",
       "status": "APPROVED",
       "stage": "reviewer",
@@ -64,24 +54,34 @@
       "reviewer_mode": "fixture:memory.json"
     },
     {
-      "at": "2026-10-13T14:53:54.872+00:00",
+      "at": "2026-10-13T15:06:00.572+00:00",
+      "what": "validated discount_for_hesitation",
+      "status": "REJECTED",
+      "stage": "rules",
+      "reasons": [
+        "playbook_needs_two_missions"
+      ],
+      "reviewer_mode": null
+    },
+    {
+      "at": "2026-10-13T15:06:04.668+00:00",
       "what": "approved fact published with memories.create",
       "memory_name": "projects/mission-ledger-1013-13546/locations/us-central1/reasoningEngines/3521753610830479360/memories/1",
       "mode": "create"
     },
     {
-      "at": "2026-10-13T14:53:57.385+00:00",
+      "at": "2026-10-13T15:06:07.117+00:00",
       "what": "b. publisher died after memories.create",
       "error": "injected fault after memories.create, before the ledger write"
     },
     {
-      "at": "2026-10-13T14:54:01.721+00:00",
+      "at": "2026-10-13T15:06:11.317+00:00",
       "what": "worker identity permissions (testIamPermissions from inside Cloud Run)",
       "process": {
         "pid": 1,
-        "revision": "ledger-worker-00028-nl2",
+        "revision": "ledger-worker-00032-lxv",
         "service": "ledger-worker",
-        "instance": "0010dd8607e03b9e3b813bbd",
+        "instance": "0010dd860704404513e6c4f3",
         "where": "cloud-run"
       },
       "service_account": "ledger-worker@mission-ledger-1013-13546.iam.gserviceaccount.com",
@@ -117,7 +117,7 @@
     {
       "assertion": "publisher refuses a rejected candidate",
       "passed": true,
-      "observed": "mem-1a49af52dd is REJECTED, not APPROVED"
+      "observed": "mem-25f5117837 is REJECTED, not APPROVED"
     },
     {
       "assertion": "approved fact stored unchanged",
@@ -147,7 +147,7 @@
     {
       "assertion": "a. publisher refuses a candidate that is still QUARANTINED",
       "passed": true,
-      "observed": "mem-dcafd5e637 is QUARANTINED, not APPROVED"
+      "observed": "mem-f987a95538 is QUARANTINED, not APPROVED"
     },
     {
       "assertion": "b. retry reconciles instead of creating a duplicate",
@@ -191,6 +191,6 @@
       "observed": []
     }
   ],
-  "ended_at": "2026-10-13T14:54:01+00:00",
+  "ended_at": "2026-10-13T15:06:11+00:00",
   "passed": true
 }

@@ -9,9 +9,10 @@ confirm.
 No. This repository is not an ADK agent in client production. It is a reference implementation, run on
 Google Cloud with synthetic data, with its tested boundaries and limits written down. What broke while it
 was being built is recorded in the README: a lock that BigQuery cannot provide, a live agent that ran out
-of output budget and was wrongly marked done, an image missing a folder, and a live reviewer that rejected
-a correct confirmation because it never saw the contact's reply, and a crashed segment whose task
-retries ran out before its lease expired.
+of output budget and was wrongly marked done, an image missing a folder, a live reviewer that rejected
+a correct confirmation because it never saw the contact's reply, a crashed segment whose task retries ran
+out before its lease expired, and a document-id encoding change that orphaned earlier contact aliases. The
+fifth live run, on the final code, passed end to end.
 
 ## What a 15-minute screen walkthrough would cover
 
@@ -20,9 +21,10 @@ retries ran out before its lease expired.
 2. `evidence/s6_bigquery_merge_race.json`: the insert-only MERGE race with its job ids, then the
    Firestore transaction.
 3. `evidence/s3_send_crash.json`: a process killed after the provider accepted, and the two recovery paths.
-4. `evidence/s1_mission_resume_live.json`: the live reviewer rejecting a correct message, and why that is
-   the safe failure.
-5. `ledger/actions.py` and `ledger/coordination.py`: about 300 lines that carry the guarantees.
+4. `evidence/live_attempts/attempt3_reviewer_without_reply.json`: the live reviewer rejecting a correct
+   message, why that is the safe failure, and `evidence/s1_mission_resume_live.json`, the same flow passing
+   once the reviewer sees the reply.
+5. `ledger/actions.py` and `ledger/coordination.py`: under 400 lines that carry the guarantees.
 
 ## Resuming after 48 hours, and where the contact lock lives
 
@@ -49,15 +51,20 @@ retries ran out before its lease expired.
 
 - The agent has `propose_memory`, which writes a quarantined candidate to Firestore, outside the bank.
 - A validator applies rules first (scope must be one contact or a named playbook; no raw contact data;
-  evidence required; a playbook rule needs at least two missions; a conflict with an approved fact on the
-  same scope and topic is held for review), then a reviewer.
+  evidence required; a playbook rule needs at least two missions), then a reviewer. Approval claims a
+  (scope, topic) slot in a Firestore transaction, so a second, contradictory fact on the same slot is held
+  for review, whether the two are validated in sequence or in parallel (scenario 5c).
 - A separate `memory-publisher` identity writes approved facts with `memories.create` and the exact approved
-  text. Never `generate` (its consolidation can update or delete existing memories), never IngestEvents,
+  text. It re-reads the candidate and moves it APPROVED to PUBLISHING in a transaction (a forged or stale
+  input is refused), and a retry after a crash between `create` and the ledger write finds the fact in the
+  listing instead of creating a duplicate. Never `generate` (its consolidation can update or delete existing memories), never IngestEvents,
   never `add_session_to_memory`. An approval ledger keeps provenance.
 - IAM, proven live under the worker's real Cloud Run identity: it can read, and its `memories.create` is
   refused by the platform (403). The publisher has a custom role limited to `memories.create`, `get`,
   `list` (no update, delete, generate or rollback). The worker cannot impersonate the publisher.
 - Absence is checked against the complete listing, with a positive control retrieved by similarity search.
+- Approval status itself is protected by code, not by IAM: the worker's Firestore role could write it. The
+  IAM boundary is at Memory Bank. Moving approvals to a database the worker cannot write closes that gap.
 - Embeddings use `gemini-embedding-001`, which the Memory Bank setup guide lists for non-English content.
 - The claim is narrow: only approved payloads enter the bank through this path. Corrections and deletions
   belong on a separate, controlled path.
@@ -77,10 +84,10 @@ lease, gate and dispatcher in this repository do not depend on ADK and would sit
    often NEEDS_REVIEW is acceptable to the team.
 4. The alias directory: which system is authoritative for contacts.
 5. Cloud Run worker with managed Sessions (tested) versus deploying the worker to Agent Runtime (not tested).
-6. A sweep for missions left RUNNING after their lease expired (task retries can end first; seen in live
-   attempt 4). Not built yet.
-7. ADK upgrade policy: `ResumabilityConfig` and Skills are experimental in 2.11; pinned versions plus
-   manifest checks contain the risk but do not remove it.
+6. Opt-out handling: a reply starting with "stop" or "unsubscribe" suppresses the contact before the agent
+   runs, and the gate then blocks any message to it. Which phrases and channels count needs a business rule.
+7. ADK upgrade policy: `ResumabilityConfig` is experimental in 2.11 (`SkillToolset` is marked stable);
+   pinned versions plus manifest checks contain the risk but do not remove it.
 
 ## Three risks
 

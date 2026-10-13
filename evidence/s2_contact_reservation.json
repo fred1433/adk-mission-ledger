@@ -2,8 +2,8 @@
   "scenario": "s2_contact_reservation",
   "title": "Contact reservation vs worker lease, and fencing",
   "where": "local process -> Firestore (Google Cloud)",
-  "started_at": "2026-10-13T14:54:44+00:00",
-  "code_commit": "17fd96eaac22",
+  "started_at": "2026-10-13T15:06:11+00:00",
+  "code_commit": "cd959e0f596e",
   "packages": {
     "google-adk": "2.11.0",
     "google-cloud-aiplatform": "1.165.1",
@@ -19,135 +19,135 @@
   "region": "us-central1",
   "steps": [
     {
-      "at": "2026-10-13T14:54:46.530+00:00",
+      "at": "2026-10-13T15:06:13.116+00:00",
       "what": "registered one contact with two aliases",
-      "contact_id": "c-10131454-57e7",
+      "contact_id": "c-10131506-9dbc",
       "aliases": [
-        "email:casey.10131454-57e7@example.com",
-        "phone:+15551454577"
+        "email:casey.10131506-9dbc@example.com",
+        "phone:+15551315069"
       ]
     },
     {
-      "at": "2026-10-13T14:54:49.602+00:00",
+      "at": "2026-10-13T15:06:16.192+00:00",
       "what": "20 concurrent reservation attempts",
-      "elapsed_s": 3.07,
+      "elapsed_s": 3.08,
       "results": [
         [
-          "m-10131454-57e7-00",
-          "refused:m-10131454-57e7-07",
-          "email:casey.10131454-57e7@example.com"
-        ],
-        [
-          "m-10131454-57e7-01",
-          "refused:m-10131454-57e7-07",
-          "phone:+15551454577"
-        ],
-        [
-          "m-10131454-57e7-02",
-          "refused:m-10131454-57e7-07",
-          "email:casey.10131454-57e7@example.com"
-        ],
-        [
-          "m-10131454-57e7-03",
-          "refused:m-10131454-57e7-07",
-          "phone:+15551454577"
-        ],
-        [
-          "m-10131454-57e7-04",
-          "refused:m-10131454-57e7-07",
-          "email:casey.10131454-57e7@example.com"
-        ],
-        [
-          "m-10131454-57e7-05",
-          "refused:m-10131454-57e7-07",
-          "phone:+15551454577"
-        ],
-        [
-          "m-10131454-57e7-06",
-          "refused:m-10131454-57e7-07",
-          "email:casey.10131454-57e7@example.com"
-        ],
-        [
-          "m-10131454-57e7-07",
+          "m-10131506-9dbc-00",
           "won",
-          "phone:+15551454577"
+          "email:casey.10131506-9dbc@example.com"
         ],
         [
-          "m-10131454-57e7-08",
-          "refused:m-10131454-57e7-07",
-          "email:casey.10131454-57e7@example.com"
+          "m-10131506-9dbc-01",
+          "refused:m-10131506-9dbc-00",
+          "phone:+15551315069"
         ],
         [
-          "m-10131454-57e7-09",
-          "refused:m-10131454-57e7-07",
-          "phone:+15551454577"
+          "m-10131506-9dbc-02",
+          "refused:m-10131506-9dbc-00",
+          "email:casey.10131506-9dbc@example.com"
         ],
         [
-          "m-10131454-57e7-10",
-          "refused:m-10131454-57e7-07",
-          "email:casey.10131454-57e7@example.com"
+          "m-10131506-9dbc-03",
+          "refused:m-10131506-9dbc-00",
+          "phone:+15551315069"
         ],
         [
-          "m-10131454-57e7-11",
-          "refused:m-10131454-57e7-07",
-          "phone:+15551454577"
+          "m-10131506-9dbc-04",
+          "refused:m-10131506-9dbc-00",
+          "email:casey.10131506-9dbc@example.com"
         ],
         [
-          "m-10131454-57e7-12",
-          "refused:m-10131454-57e7-07",
-          "email:casey.10131454-57e7@example.com"
+          "m-10131506-9dbc-05",
+          "refused:m-10131506-9dbc-00",
+          "phone:+15551315069"
         ],
         [
-          "m-10131454-57e7-13",
-          "refused:m-10131454-57e7-07",
-          "phone:+15551454577"
+          "m-10131506-9dbc-06",
+          "refused:m-10131506-9dbc-00",
+          "email:casey.10131506-9dbc@example.com"
         ],
         [
-          "m-10131454-57e7-14",
-          "refused:m-10131454-57e7-07",
-          "email:casey.10131454-57e7@example.com"
+          "m-10131506-9dbc-07",
+          "refused:m-10131506-9dbc-00",
+          "phone:+15551315069"
         ],
         [
-          "m-10131454-57e7-15",
-          "refused:m-10131454-57e7-07",
-          "phone:+15551454577"
+          "m-10131506-9dbc-08",
+          "refused:m-10131506-9dbc-00",
+          "email:casey.10131506-9dbc@example.com"
         ],
         [
-          "m-10131454-57e7-16",
-          "refused:m-10131454-57e7-07",
-          "email:casey.10131454-57e7@example.com"
+          "m-10131506-9dbc-09",
+          "refused:m-10131506-9dbc-00",
+          "phone:+15551315069"
         ],
         [
-          "m-10131454-57e7-17",
-          "refused:m-10131454-57e7-07",
-          "phone:+15551454577"
+          "m-10131506-9dbc-10",
+          "refused:m-10131506-9dbc-00",
+          "email:casey.10131506-9dbc@example.com"
         ],
         [
-          "m-10131454-57e7-18",
-          "refused:m-10131454-57e7-07",
-          "email:casey.10131454-57e7@example.com"
+          "m-10131506-9dbc-11",
+          "refused:m-10131506-9dbc-00",
+          "phone:+15551315069"
         ],
         [
-          "m-10131454-57e7-19",
-          "refused:m-10131454-57e7-07",
-          "phone:+15551454577"
+          "m-10131506-9dbc-12",
+          "refused:m-10131506-9dbc-00",
+          "email:casey.10131506-9dbc@example.com"
+        ],
+        [
+          "m-10131506-9dbc-13",
+          "refused:m-10131506-9dbc-00",
+          "phone:+15551315069"
+        ],
+        [
+          "m-10131506-9dbc-14",
+          "refused:m-10131506-9dbc-00",
+          "email:casey.10131506-9dbc@example.com"
+        ],
+        [
+          "m-10131506-9dbc-15",
+          "refused:m-10131506-9dbc-00",
+          "phone:+15551315069"
+        ],
+        [
+          "m-10131506-9dbc-16",
+          "refused:m-10131506-9dbc-00",
+          "email:casey.10131506-9dbc@example.com"
+        ],
+        [
+          "m-10131506-9dbc-17",
+          "refused:m-10131506-9dbc-00",
+          "phone:+15551315069"
+        ],
+        [
+          "m-10131506-9dbc-18",
+          "refused:m-10131506-9dbc-00",
+          "email:casey.10131506-9dbc@example.com"
+        ],
+        [
+          "m-10131506-9dbc-19",
+          "refused:m-10131506-9dbc-00",
+          "phone:+15551315069"
         ]
       ]
     },
     {
-      "at": "2026-10-13T14:54:52.272+00:00",
+      "at": "2026-10-13T15:06:17.967+00:00",
       "what": "owner mission parked; its worker lease released",
-      "mission": "m-10131454-57e7-07",
+      "mission": "m-10131506-9dbc-00",
       "generation": 1
     },
     {
-      "at": "2026-10-13T14:54:56.514+00:00",
+      "at": "2026-10-13T15:06:20.022+00:00",
       "what": "worker-1 acquired lease",
       "generation": 1,
       "lease_seconds": 2
     },
     {
-      "at": "2026-10-13T14:55:00.203+00:00",
+      "at": "2026-10-13T15:06:23.715+00:00",
       "what": "worker-1 stalled past expiry; worker-2 took over",
       "generation": 2
     }
@@ -157,33 +157,33 @@
       "assertion": "exactly one reservation owner",
       "passed": true,
       "observed": [
-        "m-10131454-57e7-07"
+        "m-10131506-9dbc-00"
       ]
     },
     {
       "assertion": "both aliases resolved to the same contact",
       "passed": true,
-      "observed": "c-10131454-57e7"
+      "observed": "c-10131506-9dbc"
     },
     {
       "assertion": "new mission refused while owner waits for a reply",
       "passed": true,
-      "observed": "refused, holder=m-10131454-57e7-07"
+      "observed": "refused, holder=m-10131506-9dbc-00"
     },
     {
       "assertion": "stale worker-1 cannot commit an action",
       "passed": true,
-      "observed": "stale generation 1 for m-10131454-57e7-fence; current is 2 owned by worker-2"
+      "observed": "stale generation 1 for m-10131506-9dbc-fence; current is 2 owned by worker-2"
     },
     {
       "assertion": "current worker-2 can commit",
       "passed": true,
       "observed": {
-        "action_id": "m-10131454-57e7-fence.first_contact.t0.v1",
+        "action_id": "m-10131506-9dbc-fence.first_contact.t0.v1",
         "generation": 2
       }
     }
   ],
-  "ended_at": "2026-10-13T14:55:02+00:00",
+  "ended_at": "2026-10-13T15:06:25+00:00",
   "passed": true
 }

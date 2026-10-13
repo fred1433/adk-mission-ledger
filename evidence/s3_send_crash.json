@@ -2,8 +2,8 @@
   "scenario": "s3_send_crash",
   "title": "Provider accepts, worker crashes before recording the receipt",
   "where": "two local OS processes -> Firestore (Google Cloud); test adapters",
-  "started_at": "2026-10-13T14:55:02+00:00",
-  "code_commit": "17fd96eaac22",
+  "started_at": "2026-10-13T15:06:26+00:00",
+  "code_commit": "cd959e0f596e",
   "packages": {
     "google-adk": "2.11.0",
     "google-cloud-aiplatform": "1.165.1",
@@ -19,14 +19,14 @@
   "region": "us-central1",
   "steps": [
     {
-      "at": "2026-10-13T14:55:23.121+00:00",
+      "at": "2026-10-13T15:06:46.377+00:00",
       "what": "[idempotent] process 1 killed after provider acceptance",
       "exit_code": 137,
       "action_status": "DISPATCHING",
       "provider_messages": 1
     },
     {
-      "at": "2026-10-13T14:55:39.168+00:00",
+      "at": "2026-10-13T15:07:02.486+00:00",
       "what": "[idempotent] process 2 ran the dispatcher",
       "exit_code": 0,
       "stdout": [
@@ -36,20 +36,20 @@
       "attempts": 2,
       "provider_messages": 1,
       "receipt": {
+        "provider_message_id": "sbx-236163e105d3",
         "replayed": true,
-        "provider_message_id": "sbx-26254407da48",
-        "accepted_at": "2026-10-13T14:55:21.043610+00:00"
+        "accepted_at": "2026-10-13T15:06:44.218876+00:00"
       }
     },
     {
-      "at": "2026-10-13T14:55:52.591+00:00",
+      "at": "2026-10-13T15:07:16.128+00:00",
       "what": "[plain] process 1 killed after provider acceptance",
       "exit_code": 137,
       "action_status": "DISPATCHING",
       "provider_messages": 1
     },
     {
-      "at": "2026-10-13T14:56:05.680+00:00",
+      "at": "2026-10-13T15:07:29.123+00:00",
       "what": "[plain] process 2 ran the dispatcher",
       "exit_code": 0,
       "stdout": [
@@ -61,7 +61,7 @@
       "receipt": null
     },
     {
-      "at": "2026-10-13T14:56:30.659+00:00",
+      "at": "2026-10-13T15:07:53.827+00:00",
       "what": "[slow] process 1 stalled past its lease, process 2 ran, then process 1 sent",
       "status_after_claim": "APPROVED",
       "process2": [
@@ -72,9 +72,9 @@
       ],
       "final_status": "NEEDS_RECONCILIATION",
       "late_receipt": {
-        "accepted_at": "2026-10-13T14:56:27.247576+00:00",
-        "provider_message_id": "sbx-374cfa69b85c",
-        "replayed": false
+        "provider_message_id": "sbx-12c181fa0388",
+        "replayed": false,
+        "accepted_at": "2026-10-13T15:07:50.458998+00:00"
       },
       "provider_messages": 1
     }
@@ -99,9 +99,9 @@
       "assertion": "[idempotent] retry reused the original provider message",
       "passed": true,
       "observed": {
+        "provider_message_id": "sbx-236163e105d3",
         "replayed": true,
-        "provider_message_id": "sbx-26254407da48",
-        "accepted_at": "2026-10-13T14:55:21.043610+00:00"
+        "accepted_at": "2026-10-13T15:06:44.218876+00:00"
       }
     },
     {
@@ -128,9 +128,9 @@
       "assertion": "[slow] late provider receipt kept on the action",
       "passed": true,
       "observed": {
-        "accepted_at": "2026-10-13T14:56:27.247576+00:00",
-        "provider_message_id": "sbx-374cfa69b85c",
-        "replayed": false
+        "provider_message_id": "sbx-12c181fa0388",
+        "replayed": false,
+        "accepted_at": "2026-10-13T15:07:50.458998+00:00"
       }
     },
     {
@@ -145,18 +145,18 @@
       "passed": true,
       "observed": {
         "first": {
-          "provider_message_id": "draft-10131455-d349",
-          "accepted_at": "2026-10-13T14:56:30.659654+00:00",
+          "provider_message_id": "draft-10131506-15a8",
+          "accepted_at": "2026-10-13T15:07:53.827747+00:00",
           "replayed": false
         },
         "second": {
-          "provider_message_id": "draft-10131455-d349",
-          "accepted_at": "2026-10-13T14:56:30.659654+00:00",
+          "provider_message_id": "draft-10131506-15a8",
+          "accepted_at": "2026-10-13T15:07:53.827747+00:00",
           "replayed": true
         }
       }
     }
   ],
-  "ended_at": "2026-10-13T14:56:31+00:00",
+  "ended_at": "2026-10-13T15:07:54+00:00",
   "passed": true
 }

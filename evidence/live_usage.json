@@ -1,0 +1,134 @@
+{
+  "price_basis": "Gemini 3.8 Flash, Global, introductory list price (USD per 1M tokens)",
+  "prices": {
+    "in": 0.75,
+    "cached": 0.075,
+    "out": 3.75
+  },
+  "attempts": [
+    {
+      "mission_id": "m-10131350-a78d-a",
+      "label": "attempt1",
+      "final_status": "DONE",
+      "agent": {
+        "prompt": 8641,
+        "cached": 0,
+        "output": 86,
+        "thoughts": 2804,
+        "calls": 5,
+        "usd": 0.01732
+      },
+      "reviewer_measured": {
+        "calls": 0,
+        "prompt": 0,
+        "cached": 0,
+        "output": 0,
+        "thoughts": 0,
+        "usd": 0.0
+      },
+      "live_reviewer_verdicts": 0,
+      "reviewer_calls_not_measured": 0
+    },
+    {
+      "mission_id": "m-10131400-2332-a",
+      "label": "attempt2",
+      "final_status": "NEEDS_REVIEW",
+      "agent": {
+        "prompt": 5857,
+        "cached": 0,
+        "output": 159,
+        "thoughts": 557,
+        "calls": 4,
+        "usd": 0.00708
+      },
+      "reviewer_measured": {
+        "calls": 0,
+        "prompt": 0,
+        "cached": 0,
+        "output": 0,
+        "thoughts": 0,
+        "usd": 0.0
+      },
+      "live_reviewer_verdicts": 0,
+      "reviewer_calls_not_measured": 0
+    },
+    {
+      "mission_id": "m-10131413-014d-a",
+      "label": "attempt3",
+      "final_status": "NEEDS_REVIEW",
+      "agent": {
+        "prompt": 12587,
+        "cached": 0,
+        "output": 489,
+        "thoughts": 0,
+        "calls": 7,
+        "usd": 0.01127
+      },
+      "reviewer_measured": {
+        "calls": 0,
+        "prompt": 0,
+        "cached": 0,
+        "output": 0,
+        "thoughts": 0,
+        "usd": 0.0
+      },
+      "live_reviewer_verdicts": 2,
+      "reviewer_calls_not_measured": 2
+    },
+    {
+      "mission_id": "m-10131436-40e7-a",
+      "label": "attempt4",
+      "final_status": "NEEDS_REVIEW",
+      "agent": {
+        "prompt": 0,
+        "cached": 0,
+        "output": 0,
+        "thoughts": 0,
+        "calls": 0,
+        "usd": 0.0
+      },
+      "reviewer_measured": {
+        "calls": 0,
+        "prompt": 0,
+        "cached": 0,
+        "output": 0,
+        "thoughts": 0,
+        "usd": 0.0
+      },
+      "live_reviewer_verdicts": 0,
+      "reviewer_calls_not_measured": 0
+    },
+    {
+      "mission_id": "m-10131511-b528-a",
+      "label": "attempt5_final",
+      "final_status": "DONE",
+      "agent": {
+        "prompt": 13303,
+        "cached": 0,
+        "output": 364,
+        "thoughts": 720,
+        "calls": 7,
+        "usd": 0.01404
+      },
+      "reviewer_measured": {
+        "calls": 2,
+        "prompt": 455,
+        "cached": 0,
+        "output": 83,
+        "thoughts": 125,
+        "usd": 0.00112
+      },
+      "live_reviewer_verdicts": 2,
+      "reviewer_calls_not_measured": 0
+    }
+  ],
+  "measured_total": {
+    "prompt": 40843,
+    "cached": 0,
+    "output": 1181,
+    "thoughts": 4206,
+    "calls": 25,
+    "usd": 0.0508
+  },
+  "not_measured": "reviewer calls before the final run (see reviewer_calls_not_measured); Memory Bank embeddings in s5 live (2 creates, 1 retrieval, a few dozen tokens)"
+}
